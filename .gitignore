@@ -239,5 +239,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-/static/data/obs_data/
+static/data/obs_data/
 *.T47
+!/static/data/obs_data/SALU/170101.T47
