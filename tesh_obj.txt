@@ -1,0 +1,58 @@
+Онлайн система для визуализации и анализа данных измерений
+продольных токов на спутниках SWARM
+
+params:
+'proj_type',    # str         miller || ortho_n || ortho_s || plot
+'plot_liter',    # str        [A, B, C] || [A, B]
+'sw_liter',     # str         A || B || C || |AC|
+'from_date',    # str         2019-5-13T22:59:59
+'to_date',      # str         2019-5-13T22:59:59
+'sw_channel',   # str         1 || 2 || 3 || None
+'fac2',         # bool
+'annotate_sw_value',    # bool
+_____________________________________________________ ^primary
+'ionomodel_date', # str         2019-5-13T22:59:59
+'ionomodel_n',  # bool
+'ionomodel_s',  # bool
+_____________________________________________________
+'auroral_date', # str         2019-5-13T22:59:59
+'auroral_n',    # bool
+'auroral_s',    # bool
+_____________________________________________________
+'proj_extend_loc',  # str []      [min_lon, max_lon, min_lat, max_lat]
+'swarm_poly_loc',   # str [[]]    [min_lon, max_lon, min_lat, max_lat]
+'cut_obs_swarm_value', # bool
+'obs_code',     # str []          in /static/data/observ_INT.txt
+'deg_radius',   # float        5.0
+_____________________________________________________
+'igrf_vector_diff',  # bool
+'measure_mu',   # bool
+'shape',        # file        None
+'near_auroral_points',  # bool   if proj_type==plot
+
+
+out
+aleph.gcras.ru/teslaswarm/?proj_type=miller&sw_liter=A... etc
+
+proj_type = Выберите тип проекции (Miller, Orthographic north, Orthographic south) или отображене графика (plot)
+plot_liter = Выберите литер(ы) спутников SWARM-
+sw_liter = Выберите интересующий спустник (SWARM-liter) или величину вектора разности Swarm A и Swarm C (|AC|)
+from_date = с даты
+to_date = по дату
+
+sw_channel = компонента вектора (N, E, C, FAC2)
+annotate_sw_value = Отображать числовые значения пролетов спутника SWARM
+near_auroral_points = (только если выбрано plot) Отображение на графике значений модели Ovation Prime (https://doi.org/10.1029/2009JA014326)
+
+ionomodel_date = Если требуется отображение модели электромагнитных параметров приполярной ионосферы (http://geomag.gcras.ru/dataserv-ionomodel.html), вердите дату и выберите полусферу (north или south)
+
+auroral_date = Если требуется отображение модели Ovation Prime (https://doi.org/10.1029/2009JA014326), введите дату и выберите полусферу (north или south)
+
+proj_extend_loc = Если требуется увеличение проекции до определенного прямоугольника, введише широту (lat) и долготу (lon)
+
+swarm_poly_loc = Если требуется отображение значений пролета спутника SWARM только в определенном прямоугольнике, введише широту (lat) и долготу (lon)
+cut_obs_swarm_value = Или же укажите код обсерватории INTERMAGNET и радиус в градусах, в пределах которого требуются значения пролета спутника SWARM
+
+igrf_vector_diff = Отображение разности векторов продольных токов между реальными данными, полученные со спутника SWARM, и модели IGRF-13
+
+measure_mu = ДМА мера аномальности значений пролета спутника SWARM

@@ -1,0 +1,138 @@
+LAT	LON	CODE	NAME	INSTITUTION	FULL_TITLE	NAME_ENG	INST_ENG	GIN	COMMENT
+43,200	76,900	AAA	Alma Ata			Alma Ata	IIRK	Edi	
+18,620	72,870	ABG	Alibag			Alibag	IIG	Kyo	
+68,358	18,823	ABK	Abisko			Abisko	SGU	Edi	
+-65,250	295,750	AIA	Argentine Islands (Akademik Vernadsky base)			Argentine Islands (Akademik Vernadsky base)	NASC	Ott	
+-13,800	188,220	API	Apia			Apia	DAFFM	Edi	
+56,433	58,567	ARS	Арти	ИГФ УрО РАН	Институт геофизики УрО РАН	Arti	IGF UB RAS	Edi	
+-7,950	345,620	ASC	Ascension Island			Ascension Island	BGS	Edi	
+-23,770	133,880	ASP	Alice Springs			Alice Springs	GA	Edi	
+49,080	14,020	BDV	Budkov			Budkov	ASCR	Edi	
+51,840	20,790	BEL	Belsk			Belsk	PAS	Edi	
+48,331	8,325	BFO	Black Forest			Black Forest	GGUKS	Edi	
+64,318	263,988	BLC	Baker Lake			Baker Lake	GSC	Ott	
+40,300	116,200	BMT	Beijing Ming Tombs			Beijing Ming Tombs	CHAS	Kyo	
+40,140	254,760	BOU	Boulder			Boulder	USGS	Gol	
+58,070	38,230	BOX	Борок	ИФЗ РАН	Институт физики Земли им.О.Ю.Шмидта РАН	Borok	IPE RAS	Par	
+49,870	260,026	BRD	Brandon			Brandon	GSC	Ott	
+71,320	203,380	BRW	Barrow			Barrow	USGS	Gol	
+30,350	270,360	BSL	Stennis Space Center			Stennis Space Center	USGS	Gol	
+69,123	254,969	CBB	Cambridge Bay			Cambridge Bay	GSC	Ott	
+64,2	283,4	CDR	Cape Dorset
+-12,188	96,834	CKI	Cocos-Keeling Islands			Cocos-Keeling Islands	GA	Edi	
+48,020	2,270	CLF	Chambon la Foret			Chambon la Foret	IPGP	Par	
+64,870	212,140	CMO	College			College	USGS	Gol	
+-35,320	149,360	CNB	Canberra			Canberra	GA	Edi	
+44,080	124,860	CNH	Changchun			Changchun	CEA	Edi	
+17,294	78,919	CPL	Choutuppal			Choutuppal	NGRI	Edi	
+-66,283	110,533	CSY	Casey Station			Casey Station	GA	Edi	
+-20,100	146,300	CTA	Charters Towers			Charters Towers	GA	Edi	
+36,370	126,854	CYG	Cheongyang			Cheongyang	KMA	Kyo	
+-46,430	51,870	CZT	Port Alfred			Port Alfred	EOST	Par	
+70,360	211,210	DED	Deadhorse			Deadhorse	USGS	Gol	
+11,940	108,480	DLT	Dalat			Dalat	VAST / IPGP	Par	
+-75,250	124,167	DMC	Dome C			Dome C	EOST / INGV	Par	
+50,100	4,600	DOU	Dourbes			Dourbes	RMIB	Edi	
+-66,670	140,010	DRV	Dumont d'Urville			Dumont d'Urville	EOST	Par	
+41,390	14,280	DUR	Duronia			Duronia	INGV	Par	
+40,820	0,490	EBR	Ebro			Ebro	OEB	Edi	
+55,320	356,800	ESK	Eskdalemuir			Eskdalemuir	BGS	Edi	
+-43,420	172,350	EYR	Eyrewell			Eyrewell	GNS	Edi	
+58,759	265,912	FCC	Fort Churchill			Fort Churchill	GSC	Ott	
+38,200	282,630	FRD	Fredericksburg			Fredericksburg	USGS	Gol	
+37,090	240,280	FRN	Fresno			Fresno	USGS	Gol	
+48,170	11,280	FUR	Furstenfeldbruck			Furstenfeldbruck	LMU	Edi	
+0,695	73,154	GAN	Gan			Gan	ETH	Edi	
+44,400	20,800	GCK	Grocka			Grocka	GIG	Edi	
+69,250	306,470	GDH	Qeqertarsuaq (Godhavn)			Qeqertarsuaq (Godhavn)	DTU	Kyo	
+-31,356	115,715	GNG	Gingin			Gingin	GA	Edi	
+13,590	144,870	GUA	Guam			Guam	USGS	Gol	
+28,320	343,570	GUI	Guimar-Tenerife			Guimar-Tenerife	IGNS	Par	
+23,000	112,500	GZH	Zhaoqing			Zhaoqing	CEA	Edi	
+51,000	355,520	HAD	Hartland			Hartland	BGS	Edi	
+-25,880	27,710	HBK	Hartebeesthoek			Hartebeesthoek	HMO	Edi	
+-34,430	19,230	HER	Hermanus			Hermanus	HMO	Edi	
+54,610	18,820	HLP	Hel			Hel	PAS	Edi	
+21,320	202,000	HON	Honolulu			Honolulu	USGS	Gol	
+47,860	18,190	HRB	Hurbanovo			Hurbanovo	SAS	Par	
+77,000	15,370	HRN	Hornsund			Hornsund	PAS	Edi	
+-12,050	284,670	HUA	Huancayo			Huancayo	IGP	Edi	
+17,400	78,600	HYB	Hyderabad			Hyderabad	NGRI	Edi	
+63,753	291,482	IQA	Iqaluit			Iqaluit	GSC	Ott	
+52,270	104,450	IRT	Иркутск	ИСЗФ СО РАН	Институт солнечно-земной физики СО РАН	Irkutsk	ISTP SB RAS	Edi	
+40,500	29,720	IZN	Iznik			Iznik	KEORI	Edi	
+26,920	75,800	JAI	Jaipur			Jaipur	IIG	Kyo	
+70,356	211,201	JCO	Jim Carrigan Observatory			Jim Carrigan Observatory	HAL / BGS	Edi	Halliburton (http://www.halliburton.com/)
+36,230	140,180	KAK	Kakioka			Kakioka	JMA	Kyo	
+-12,690	132,470	KDU	Kakadu			Kakadu	GA	Edi	
+-54,282	323,507	KEP	King Edward Point			King Edward Point	BGS	Edi	
+47,610	134,690	KHB	Хабаровск	ИКИР ДВО РАН	Институт космофизических исследований и распространения радиоволн ДВО РАН	Khabarovsk	IKIR FEB RAS	Edi	
+50,720	30,300	KIV	Kiev			Kiev	NASU	Edi	
+55,3	282,2	KJPK	Kuujuarapik
+-26,540	18,110	KMH	Keetmanshoop			Keetmanshoop	HMO	Edi	
+31,420	130,880	KNY	Kanoya			Kanoya	JMA	Kyo	
+5,210	307,270	KOU	Kourou			Kourou	IPGP	Par	
+60,130	358,820	LER	Lerwick			Lerwick	BGS	Edi	
+45,408	16,659	LON	Lonjsko Polje			Lonjsko Polje	UNIZG	Edi	
+-22,220	114,100	LRM	Learmonth			Learmonth	GA	Edi	
+49,900	23,750	LVV	Lviv			Lviv	NASU	Edi	
+64,600	18,800	LYC	Lycksele			Lycksele	SGU	Edi	
+36,100	103,840	LZH	Lanzhou			Lanzhou	CEA / IPGP	Par	
+50,298	5,682	MAB	Manhay			Manhay	RMIB	Edi	
+-67,600	62,880	MAW	Mawson			Mawson	GA	Edi	
+14,380	343,030	MBO	Mbour			Mbour	IRD	Par	
+-54,500	158,950	MCQ	Macquarie Island			Macquarie Island	GA	Edi	
+54,616	246,653	MEA	Meanook			Meanook	GSC	Ott	
+60,051	150,728	MGD	Магадан	ИКИР ДВО РАН	Институт космофизических исследований и распространения радиоволн ДВО РАН	Magadan	IKIR FEB RAS	Edi	
+43,910	144,190	MMB	Memambetsu			Memambetsu	JMA	Kyo	
+61,170	314,570	NAQ	Narsarsuaq			Narsarsuaq	DTU	Kyo	
+47,630	16,720	NCK	Nagycenk			Nagycenk	HAS	Edi	
+48,270	242,880	NEW	Newport			Newport	USGS	Gol	
+52,070	12,680	NGK	Niemegk			Niemegk	GFZ	Edi	
+60,510	24,660	NUR	Nurmijarvi			Nurmijarvi	FMI	Edi	
+54,850	83,230	NVS	Новосибирск	ИНГГ СО РАН	Институт нефтегазовой геологии и геофизики им. А.А.Трофимука СО РАН	Novosibirsk	IPGG SB RAS	Edi	
+-60,737	315,260	ORC	Orcadas			Orcadas	SMN	Edi	
+45,403	284,448	OTT	Ottawa			Ottawa	GSC	Ott	
+-49,350	70,260	PAF	Port-aux-Francais			Port-aux-Francais	EOST	Par	
+42,500	24,200	PAG	Panagjurishte			Panagjurishte	BAS	Edi	
+66,500	273,8	RBY	Repulse Bay
+38,100	23,900	PEG	Pedeli			Pedeli	IGME	Edi	
+52,971	158,248	PET	Паратунка	ИКИР ДВО РАН	Институт космофизических исследований и распространения радиоволн ДВО РАН	Paratunka	IKIR FEB RAS	Edi	
+21,030	105,950	PHU	Phuthuy			Phuthuy	VAST / IPGP	Par	
+-31,400	296,120	PIL	Pilar			Pilar	SMN	Edi	
+-17,570	210,420	PPT	Pamatai			Pamatai	IPGP	Par	
+-51,700	302,110	PST	Port Stanley			Port Stanley	BGS	Edi	
+74,690	265,105	RES	Resolute Bay			Resolute Bay	GSC	Ott	
+62,2	284,3	SALU	Salluit
+-77,850	166,780	SBA	Scott Base			Scott Base	GNS	Edi	
+43,932	299,991	SBL	Sable Island			Sable Island	BGS	Edi	
+36,667	354,055	SFS	San Fernando			San Fernando	RIOA	Par	
+-15,011	354,003	SHE	Saint Helena			Saint Helena	GFZ	Kyo	
+55,350	199,540	SHU	Shumagin			Shumagin	USGS	Gol	
+57,060	224,670	SIT	Sitka			Sitka	USGS	Gol	
+18,110	293,850	SJG	San Juan			San Juan	USGS	Gol	
+67,370	26,630	SOD	Sodankyla			Sodankyla	SOD	Edi	
+25,117	66,449	SON	Sonmiani			Sonmiani	SUPARCO	Edi	
+60,580	29,650	SPG	Санкт-Петербург	СПбФ ИЗМИРАН	Санкт-Петербургский Филиал Института земного магнетизма, ионосферы и распространения радиоволн им. Н. В. Пушкова РАН	St. Petersburg	IZMIRAN SPb	Par	
+39,550	355,650	SPT	San Pablo-Toledo			San Pablo-Toledo	IGNS	Par	
+47,595	307,323	STJ	St John's			St John's	GSC	Ott	
+44,680	26,250	SUA	Surlari			Surlari	GIR	Par	
+22,790	5,530	TAM	Tamanrasset			Tamanrasset	CRAAG / IPGP	Par	
+-37,067	347,685	TDC	Tristan da Cunha			Tristan da Cunha	DTU	Kyo	
+77,470	290,770	THL	Qaanaaq (Thule)			Qaanaaq (Thule)	DTU	Kyo	
+46,900	17,540	THY	Tihany			Tihany	ELGI	Edi	
+-43,300	294,700	TRW	Trelew			Trelew	UNLP / RMIB	Edi	
+-19,202	17,584	TSU	Tsumeb			Tsumeb	HMO	Edi	
+-1,205	311,487	TTB	Tatuoca			Tatuoca	ON / GFZ	Kyo	
+32,180	249,270	TUC	Tucson			Tucson	USGS	Gol	
+59,903	17,353	UPS	Uppsala			Uppsala	SGU	Edi	
+51,933	349,750	VAL	Valentia			Valentia	IMS	Edi	
+48,520	236,580	VIC	Victoria			Victoria	GSC	Ott	
+-70,683	351,718	VNA	Neumayer Station ?			Neumayer Station ?	AWI / GFZ	Kyo	
+-78,464	106,835	VOS	Восток	ААНИИ	Арктический и антарктический научно-исследовательский институт	Vostok	AARI	Kyo	
+-22,400	316,350	VSS	Vassouras			Vassouras	ON	Par	
+47,931	15,866	WIC	Conrad Observatory			Conrad Observatory	ZAMG	Edi	
+43,810	87,710	WMQ	Urumqi			Urumqi	CEA	Edi	
+53,740	9,070	WNG	Wingst			Wingst	GFZ	Edi	
+61,960	129,660	YAK	Якутск	ИКФИА СО РАН	Институт космофизических исследований и аэрономии СО РАН	Yakutsk	SHICRA SB RAS	Edi	
+62,480	245,518	YKC	Yellowknife			Yellowknife	GSC	Ott	
