@@ -31,6 +31,7 @@ def get_image_page(request):
         'from_date',    # str   2019-5-13T22:59:59
         'to_date',      # str   2019-5-13T22:59:59
         'sw_channel',   # str
+        # 'supermag_obs',   # str
         'annotate_sw_value',    # bool
         'ionomodel_date',  # str
         'ionomodel_n',  # bool
@@ -85,6 +86,8 @@ def get_image_page(request):
         delta = int(param_dict['sw_delta'])
         if delta >= 2:
             sm.set_swarm_value_delta(delta)
+    else:
+        delta = 1
 
 
     if param_dict['annotate_sw_value'] == 'true':
@@ -172,6 +175,7 @@ def get_image_page(request):
         labels = []
         include_data = []
         bool_set = sm.get_strParam2arrayParam(param_dict['plot_liter'])
+        station = None
         for i, selected in enumerate(bool_set):
             if selected:
                 if i == 0:   # if A, B, C
@@ -196,10 +200,12 @@ def get_image_page(request):
                     labels.append('swarm-%s %s' % (swarm_set[0], lbs[sw_channel]))
                 swarm_sets.append(swarm_set)
 
+                if param_dict['supermag_obs'] != '-':
+                    station = param_dict['supermag_obs']
 
 
         print(bool_set, '=> plot sets:', len(swarm_sets), labels, 'include:')
-        im = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, include=include_data, sw_channel=sw_channel)
+        im = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, include=include_data, sw_channel=sw_channel, delta=delta, station=station)
     else:
         im = sm.get_projection_image(swarm_set=SWARM_SET, swarm_channel=sw_channel, proj_type=param_dict['proj_type'],
                                      annotate_sw_value_bool=annotate_sw_value_bool)

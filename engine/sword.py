@@ -28,7 +28,7 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from scipy.interpolate import griddata
 from teslaswarm.settings import STATIC_OS_PATH
 from tools.dt_foo import decode_str_dt_param, decode_str_time_param
-from tools.data_foo import get_mag_coordinate_system_lines, geo2mag, mag2mlt, get_obs_value_by_time
+from tools.data_foo import get_mag_coordinate_system_lines, geo2mag, mag2mlt, get_sMAGstation_value_by_time
 
 class SWORD():
     """
@@ -121,7 +121,7 @@ class SWORD():
         #plt.gca().xaxis.set_major_locator(plt.NullLocator())
         #plt.gca().yaxis.set_major_locator(plt.NullLocator())
 
-    def draw_plot(self, draw_list, include=None, draw_obs=None):
+    def draw_plot(self, draw_list, include=None, delta=1, draw_station=None):
         # long_set
         short_set, long_set = False, False
         if len(draw_list) == 1:
@@ -131,7 +131,7 @@ class SWORD():
 
         #   отрисовка графика
         if short_set:
-            fig = plt.figure(figsize=(20, 10))
+            fig = plt.figure(figsize=(20, 20))
             #axs = host_subplot(111, axes_class=axisartist.Axes)
             axs = fig.add_subplot(111)
             axs.set_aspect('auto')
@@ -196,22 +196,25 @@ class SWORD():
             ax1.plot(np.arange(len(time_list)), value, c='r', label=label)
             if include[i] is not None:
                 ax1.plot(np.arange(len(include[i])), include[i], c='b', label='auroral')
-            if draw_obs is not None:
-                ax3.set_ylabel("%s ground station, nT" % draw_obs)
+            if draw_station is not None:
+                ax3.set_ylabel("%s ground ground_station, nT" % draw_station)
                 ch_str = label.split(' ')[1]
                 channels = ['n', 'e', 'c']
                 try:
                     ch_where_nec = channels.index(ch_str)
-                    obs_value = get_obs_value_by_time(date_list, time_list, channel=ch_where_nec, obs=draw_obs)
-                    ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_obs, ch_str))
+                    obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=ch_where_nec, delta=delta, station=draw_station)
+                    ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, ch_str))
 
                 except:
                     if ch_str == 'fac2':
                         for chnl in [0, 1, 2]:     # n, e, c
-                            obs_value = get_obs_value_by_time(date_list, time_list, channel=chnl, obs=draw_obs)
-                            ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_obs, channels[chnl]))
+                            obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=chnl, delta=delta, station=draw_station)
+                            ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, channels[chnl]))
 
-
+            if 'fac2' in label:
+                label += ' nA/m²'
+            else:
+                label += ' nT'
             ax1.annotate("MLat MLT\n\nLat Lon", xy=(-.05, 1.03), xycoords="axes fraction")
             ax1.set_ylabel(label)
             ax1.set_xticks(np.array(date_ticks[:, 0]).astype(int))
@@ -228,57 +231,46 @@ class SWORD():
             ax2.grid()
             ax1.legend()
             ax3.legend(loc=4)
+        if draw_list[0][1][0] != draw_list[0][1][-1]:   # first date != second date
+            dt_from, dt_to = decode_str_dt_param(draw_list[0][1][0] + 'T' + draw_list[0][2][0]), decode_str_dt_param(
+                draw_list[0][1][-1] + 'T' + draw_list[0][2][-1])
+            fig.suptitle('from %s to %s' % (dt_from, dt_to), fontsize=16)
+        else:
+            """
+            date_str_list = np.unique(draw_list[0][1])
+            date_count_list = np.zeros(len(date_str_list))
+            for i, d_str in enumerate(date_str_list):
+                date_where = len(np.where(draw_list[0][1]==d_str))
+                print(date_where)
+                date_count_list[i] = date_where
+            fig.suptitle(date_str_list[np.argmax(date_count_list)], fontsize=16)
+            """
+            fig.suptitle(draw_list[0][1][0], fontsize=16)
 
-        dt_from, dt_to = decode_str_dt_param(draw_list[0][1][0]+'T'+draw_list[0][2][0]), decode_str_dt_param(draw_list[0][1][-1]+'T'+draw_list[0][2][-1])
-        fig.suptitle('from %s to %s' % (dt_from, dt_to), fontsize=16)
         plt.grid(True)
 
 
-    def draw_mag_coord_lines(self, date, geomag_pole=False):
-        mag_lat_lines, mag_lon_lines, annotate_points = get_mag_coordinate_system_lines(date, geomag_pole)
-
-        for lat_lines in mag_lat_lines:
-            self.ax.plot(lat_lines[:, 1], lat_lines[:, 0], 'r:', zorder=1, lw=1, alpha=0.75,
-                         transform=ccrs.Geodetic())
-        for lon_lines in mag_lon_lines:
-            self.ax.plot(lon_lines[:, 1], lon_lines[:, 0], 'r:', zorder=1, lw=1, alpha=0.75,
-                         transform=ccrs.Geodetic())
-        for i, xy in enumerate(annotate_points):
-            if self.proj_type == 'ortho_n':
-                if xy[2][0] > 44:
-                    self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6,
-                                 color='r')
-            if self.proj_type == 'ortho_s':
-                if xy[2][0] < -29:
-                    self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6,
-                                 color='r')
-            else:
-                self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6, color='r')
 
 
-    def draw_swarm_scatter(self, points, values, channel=0, annotate=False, custom_value_name=None):
+
+    def draw_swarm_scatter(self, points, values, custom_label=None, annotate=False):
         """отрисовка """
         # prepare colorbar, based on values
-        if custom_value_name is not None:
-            label = custom_value_name
-            if custom_value_name == "Dd":
-                cmap = plt.get_cmap('jet')
-                #cmap = plt.get_cmap('seismic')
-            else:
-                cmap = plt.get_cmap('seismic')
+        # 'n', 'e', 'c', fac2, mu, Dd
 
-        elif channel is None:
-            label = 'SWARM ' + "fac2"
-            if len(np.array(values).shape) > 1:
-                values = values[:, channel]
-            cmap = plt.get_cmap('seismic')
-
+        if custom_label in ['dBn', 'dBe', 'dBd']:
+            unit = 'SWARM ' + custom_label + 'nT'
+        elif custom_label == 'fac2':
+            unit = 'SWARM FAC2 nA/m²'
+        elif custom_label == 'mu':
+            unit = 'DMA anomaly lvl'
+        elif custom_label == "Dd":
+            unit = '|SWARM-Model| Dd nT'
         else:
-            label_set = ['dBn', 'dBe', 'dBd', 'dB']
-            label = 'SWARM ' + label_set[channel]
-            cmap = plt.get_cmap('seismic')
+            unit = 'no unit'
+        cmap = plt.get_cmap('seismic')
 
-        self.draw_colorbar(values=values, cmap=cmap, label=label, vcenter=0.)
+        self.draw_colorbar(values=values, cmap=cmap, label=unit, vcenter=0.)
 
 
         # draw scatter point, color based on values and legend
@@ -369,6 +361,27 @@ class SWORD():
             except Exception as e:
                 pass"""
 
+    def draw_mag_coord_lines(self, date, geomag_pole=False):
+        mag_lat_lines, mag_lon_lines, annotate_points = get_mag_coordinate_system_lines(date, geomag_pole)
+
+        for lat_lines in mag_lat_lines:
+            self.ax.plot(lat_lines[:, 1], lat_lines[:, 0], 'r:', zorder=1, lw=1, alpha=0.75,
+                         transform=ccrs.Geodetic())
+        for lon_lines in mag_lon_lines:
+            self.ax.plot(lon_lines[:, 1], lon_lines[:, 0], 'r:', zorder=1, lw=1, alpha=0.75,
+                         transform=ccrs.Geodetic())
+        for i, xy in enumerate(annotate_points):
+            if self.proj_type == 'ortho_n':
+                if xy[2][0] > 44:
+                    self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6,
+                                 color='r')
+            if self.proj_type == 'ortho_s':
+                if xy[2][0] < -29:
+                    self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6,
+                                 color='r')
+            else:
+                self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6, color='r')
+
     def draw_vector(self, sw_pos, B):
         X, Y = sw_pos[:, 1], sw_pos[:, 0]
         #B = sw_value[:, :2]
@@ -409,7 +422,7 @@ class SWORD():
 
 
         X, Y, flux_value = surf_data
-        cmap_args = self.draw_colorbar(flux_value, cmap='plasma', label='auroral %s egrs/cm2s' % hemisphere, vmin=0.5, )
+        cmap_args = self.draw_colorbar(flux_value, cmap='plasma', label='auroral %s ergs/cm²' % hemisphere, vmin=0.5, )
         #cmap_args = self.draw_colorbar(flux_value, cmap=aurora_cmap, label='auroral %s egrs/cm2s' % hemisphere, vmin=0.5, )
         """if hemisphere == 'north':
             rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=90)

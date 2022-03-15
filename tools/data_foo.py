@@ -12,6 +12,7 @@ from geospacepy import satplottools, special_datetime
 import pyIGRF
 from pyIGRF import calculate
 from tools.dt_foo import *
+from tools.supermag_api import SuperMAGGetData, sm_grabme
 from scipy.interpolate import griddata
 import shapely
 from shapely.geometry import Point
@@ -526,18 +527,31 @@ def open_superMAG_vcf(date):
     with open(OBS_DATA_PATH+'%s.T47' % filename, mode='r') as vcf:
         lines = vcf.readlines()
 
-    obs_data = []
+    station_data = []
     zero_time = decode_str_dt_param(date+'T'+'00:00:00')
     for i, line in enumerate(lines):
         if i == 0:
             continue
         line = np.array(line.rstrip('\n').split(',')[0].split('    ')[1:]).astype(float)    # ['-111.600', ' -13.900', '-158.200']
         zero_time = zero_time + pd.Timedelta('%s minutes' % 1)
-        obs_data.append([zero_time, line[0], line[1], line[2]])
-    return np.array(obs_data)
+        station_data.append([zero_time, line[0], line[1], line[2]])
+    return np.array(station_data)
 
-def get_obs_value_by_time(date_array, time_array, channel, obs):
-    def nearest(items, pivot):
+def get_superMAG_value_from_web(date, station):
+    answer = SuperMAGGetData(logon='pilipenko',start='%sT00:00:00'%date, extent=86400,
+                             station=station, flagstring='',)
+    station_data = []
+    i, zero_time = 0, decode_str_dt_param(date + 'T' + '00:00:00')
+    for n, e, c in zip(sm_grabme(answer[1], 'N', 'geo'), sm_grabme(answer[1], 'E', 'geo'), sm_grabme(answer[1], 'Z', 'geo')):
+        zero_time = zero_time + pd.Timedelta('%s minutes' % 1)
+        station_data.append([zero_time, n, e, c])
+        i += 1
+    return np.array(station_data)
+
+def get_sMAGstation_value_by_time(date_array, time_array, channel, delta, station):
+
+    """
+        def nearest(items, pivot):
         min_idx = 0
         min_value = None
         for k, x in enumerate(items):
@@ -551,18 +565,96 @@ def get_obs_value_by_time(date_array, time_array, channel, obs):
                 min_idx = k
         return min_idx
 
-    obs_value_array = []
+
+    def nearest_with_nan(station_times, current_time, station_values, delta):
+        nearest_idx = nearest(station_times, current_time)
+        nearest_time = station_times[nearest_idx]
+        difference = (current_time - nearest_time)
+        total_seconds = difference.total_seconds()
+
+        if delta > 60:
+            return station_values[nearest_idx]
+        else:
+            if total_seconds <= delta:
+                return station_values[nearest_idx]
+
+            else:
+                return np.array([np.nan, np.nan, np.nan])
+
+    """
+
+    def fill_day_value(this_day_time_array, station_times, station_values):
+        def get_future_value(v1, v2, step):
+            if v1 > v2:
+                return np.flip(np.arange(v2, v1, step))
+            else:
+                return np.arange(v1, v2, step)
+
+        extend_station_data = []
+        station_last_value_idx = 0
+        future_value_idx = 0
+        station_next_dt = station_times[station_last_value_idx + 1]
+
+        for i, ct in enumerate(this_day_time_array):
+            if i == 0:
+                step = np.abs(station_values[station_last_value_idx]-station_values[station_last_value_idx + 1])/60
+                future_values = get_future_value(station_values[station_last_value_idx],
+                                                 station_values[station_last_value_idx+1], step)
+            if ct != station_next_dt:
+
+                extend_station_data.append([ct, future_values[future_value_idx]])
+                future_value_idx += 1
+            else:
+                future_value_idx = 0
+                station_last_value_idx += 1
+                if station_last_value_idx+1 < len(station_times):
+                    station_next_dt = station_times[station_last_value_idx+1]
+                else:
+                    continue
+
+                extend_station_data.append([ct, station_values[station_last_value_idx]])
+                step = np.abs(station_values[station_last_value_idx]-station_values[station_last_value_idx + 1])/60
+                future_values = get_future_value(station_values[station_last_value_idx],
+                                                 station_values[station_last_value_idx + 1], step)
+        return np.array(extend_station_data)
+
+
+    #TODO edit data finder
+
+    station_data = get_superMAG_value_from_web(date_array[0], station)
+    this_day_time_array = np.arange(station_data[0, 0], station_data[0, 0] + datetime.timedelta(days=1),
+                                    datetime.timedelta(seconds=1)).astype(datetime.datetime)
+    station_sec_time = []
+    station_sec_value = []
     for i, date in enumerate(date_array):
         if i == 0:
-            obs_v = open_superMAG_vcf(date)
-        else:
-            if date_array[i-1] != date_array[i]:
-                obs_v = open_superMAG_vcf(date)
-        obs_time = obs_v[:, 0]
-        obs_value = obs_v[:, 1:]
-        nearest_obs_idx = nearest(obs_time, decode_str_dt_param(date+'T'+time_array[i]))
-        obs_value_array.append(obs_value[nearest_obs_idx][int(channel)])
-    return np.array(obs_value_array)
+            station_times = station_data[:, 0]
+            station_values = station_data[:, 1:]
+            day_data_per_sec = fill_day_value(this_day_time_array, station_times, station_values[:, channel])
+            station_sec_time.extend(day_data_per_sec[:, 0])
+            station_sec_value.extend(day_data_per_sec[:, 1])
+        if i != 0 and date_array[i-1] != date_array[i]:
+            station_data = get_superMAG_value_from_web(date, station)
+            this_day_time_array = np.arange(station_data[0, 0], station_data[0, 0] + datetime.timedelta(days=1),
+                                            datetime.timedelta(seconds=1)).astype(datetime.datetime)
+            station_times = station_data[:, 0]
+            station_values = station_data[:, 1:]
+            day_data_per_sec = fill_day_value(this_day_time_array, station_times, station_values[:, channel])
+            station_sec_time.extend(day_data_per_sec[:, 0])
+            station_sec_value.extend(day_data_per_sec[:, 1])
+    #print(station_sec_value)
+    #print(station_sec_time)
+
+
+    station_delta_value = []
+    for i, cd in enumerate(date_array):
+        sw_dt = decode_str_dt_param(cd+'T'+time_array[i])
+        for k, station_dt in enumerate(station_sec_time):
+            if station_dt == sw_dt:
+                station_delta_value.append(station_sec_value[k])
+
+
+    return np.array(station_delta_value)
 
 
 

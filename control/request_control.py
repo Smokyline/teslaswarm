@@ -144,7 +144,7 @@ class teslaswarmControl():
                              annotate_sw_value_bool=annotate_sw_value_bool, cut_deg_radius=self.deg_radius)
         return im   # Image.open(buf)
 
-    def get_plotted_image(self, swarm_sets, labels, include, sw_channel):
+    def get_plotted_image(self, swarm_sets, labels, include, sw_channel, delta, station):
         """
         swarm_sets, labels, include, channel
         swarm_sets=[fac_set_A, fac_set_B, C]
@@ -153,7 +153,9 @@ class teslaswarmControl():
         im = get_plot_im(swarm_sets=swarm_sets,
                          labels=labels,
                          include=include,
-                         channel=sw_channel)
+                         channel=sw_channel,
+                         delta=delta,
+                         ground_station=station)
 
         return im   # Image.open(buf)
 

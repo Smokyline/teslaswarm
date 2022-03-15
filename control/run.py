@@ -107,8 +107,8 @@ im3 = projection_im(swarm_info=[swarm_set_B, from_date, to_date, sw_channel],
 #im4 = get_plot_im(swarm_sets=[fac_set_A, fac_set_B, fac_set_C], labels=['fac swA', 'fac swB', 'fac swC'], include=[auroral_to_swarm_A, auroral_to_swarm_B, None], channel=None)
 #im4 = get_plot_im(swarm_sets=[swarm_set_A], labels=['swarm-A n', None, None ], include=[None, None, None], channel=0, obs='SALU')
 
-im4 = get_plot_im(swarm_sets=[swarm_set_A], labels=['swarm-A n', 'swarm-A e', 'swarm-A c' ], include=[None, None, None], channel=None, obs='SALU')
-#im4 = get_plot_im(swarm_sets=[fac_set_A], labels=['swarm-A fac2', None, None ], include=[None, None, None], channel=None, obs='SALU')
+#im4 = get_plot_im(swarm_sets=[swarm_set_A], labels=['swarm-A n', 'swarm-A e', 'swarm-A c' ], include=[None, None, None], channel=None, delta=delta, ground_station='T47')
+im4 = get_plot_im(swarm_sets=[fac_set_A], labels=['swarm-A fac2', None, None ], include=[None, None, None], channel=None, delta=delta, ground_station='T47')
 
 #   fourths
 #out_image = stack_images(2000, im1, im2, im3, im4)

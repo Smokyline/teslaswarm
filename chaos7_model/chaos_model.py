@@ -37,5 +37,5 @@ class CHAOS7():
         return self.SW_C_theta, self.SW_C_phi
     def get_chaos_theta_phi(self):
         return self.B_radius, self.B_theta, self.B_phi
-    # TODO
+    # TODO check chaos coef
 

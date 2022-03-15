@@ -88,11 +88,15 @@ def get_proj_image(swarm_info, proj_type,
     #   выбор канала n, e, c
     if len(np.array(swarm_values_nec).shape) > 1 and swarm_channel is not None:
         swarm_values = swarm_values_nec[:, swarm_channel]
+        legend_label = ['dBn', 'dBe', 'dBd'][swarm_channel]
     else:
         swarm_values = swarm_values_nec  # fac2
+        legend_label = 'fac2'
     if measure_mu:
         swarm_values = get_measure_mu(swarm_values)
         ax_label += ' measure_mu '
+        legend_label = 'mu'
+
 
 
     # выбор точек измерений SWARM в указанном полигоне
@@ -149,7 +153,7 @@ def get_proj_image(swarm_info, proj_type,
         vector_subtraction = swarm_egrf_vector_subtraction(swarm_pos_in_poly, vector_components, swarm_date_in_poly)
         swarm_values_in_poly = vector_subtraction[:, 0]     # dd
         vector_components = vector_subtraction[:, (1, 2)]   # dx, dy
-        custom_value_name = 'Dd'
+        legend_label = 'Dd'
 
         # convert to geomagnetic coords
         #swarm_pos_in_poly = geo2mag(swarm_pos_in_poly, swarm_date_in_poly)
@@ -176,8 +180,8 @@ def get_proj_image(swarm_info, proj_type,
         sword.draw_swarm_path(swarm_pos[:, :2])
     # отрисовка точек измерений swarm в в указанном полигоне
     # если полигона нет - отрисовка всех (swarm_pos_in_poly = swarm_pos)
-    sword.draw_swarm_scatter(swarm_pos_in_poly[:, :2], swarm_values_in_poly, channel=swarm_channel,
-                                 annotate=annotate_sw_value_bool, custom_value_name=custom_value_name)  # отрисовка значение точек на орбите
+    sword.draw_swarm_scatter(swarm_pos_in_poly[:, :2], swarm_values_in_poly, custom_label=legend_label,
+                                 annotate=annotate_sw_value_bool)  # отрисовка значение точек на орбите
 
 
     # конвертация figure matplotlib в PIL image для stacker.py
@@ -189,7 +193,7 @@ def get_proj_image(swarm_info, proj_type,
     return im
 
 
-def get_plot_im(swarm_sets, labels, include, channel, obs=None):
+def get_plot_im(swarm_sets, labels, include, channel, delta, ground_station=None):
     #swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values = swarm_info[0]
     #from_date, to_date = swarm_info[1], swarm_info[2]
     # инициация рендера
@@ -227,7 +231,7 @@ def get_plot_im(swarm_sets, labels, include, channel, obs=None):
                 value = np.array(swarm_set[4])[:, ch]
                 draw_list.append([label, date_list, time_list, value, position_list])
 
-    sword.draw_plot(draw_list, include, draw_obs=obs)
+    sword.draw_plot(draw_list, include, delta, draw_station=ground_station)
 
     im = sword.fig_to_PIL_image()
     # im.save(STATIC_OS_PATH + '/media/images/2.png')
