@@ -121,8 +121,8 @@ USE_TZ = True
 
 
 
-#STATIC_URL = '/static/'
-STATIC_URL = '/request/static/'
+STATIC_URL = '/static/'
+#STATIC_URL = '/request/static/'
 
 STATIC_OS_PATH = os.path.join(BASE_DIR, 'static')
 print(STATIC_OS_PATH)
