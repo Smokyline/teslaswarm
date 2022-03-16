@@ -49,6 +49,7 @@ def get_image_page(request):
         #'mag_grid',   # bool
         #'shape',        # file
         'near_auroral_points',  # bool
+        'txt_out',  # bool
         ]
     param_dict = {}
     for p in param_name:
@@ -208,12 +209,17 @@ def get_image_page(request):
         im = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, include=include_data, sw_channel=sw_channel, delta=delta, station=station)
     else:
         im = sm.get_projection_image(swarm_set=SWARM_SET, swarm_channel=sw_channel, proj_type=param_dict['proj_type'],
-                                     annotate_sw_value_bool=annotate_sw_value_bool)
+                                  annotate_sw_value_bool=annotate_sw_value_bool)
 
-    save_single_image(im, id)
-    os.umask(original_umask)
+    if param_dict['txt_out'] == 'true':
+        #txt
+        os.umask(original_umask)
+        return render(request, "index.html", context)   #{{ file_content }}.
+    else:
+        save_single_image(im, id)
+        os.umask(original_umask)
+        return render(request, 'show_image.html', {'STATIC_URL': settings.STATIC_URL, 'IMAGE_NAME': id})
 
-    return render(request, 'show_image.html', {'STATIC_URL': settings.STATIC_URL, 'IMAGE_NAME': id})
 
 def test(request):
     conda_env = os.environ['CONDA_DEFAULT_ENV']

@@ -28,6 +28,7 @@ def get_sql_response(swarm_type, from_date, to_date, fac2_mod=False):
         request = "SELECT date, latitude, longitude, radius, fac FROM sat_sec_fac_plain WHERE code='%s' " \
                   "AND date BETWEEN %s AND %s" % (
                       swarm_type, from_date, to_date)
+        # a % c SW_
     else:
         #request = "SELECT date, latitude, longitude, radius, n, e, c FROM sat_sec_plain WHERE code='%s' " \
         request = "SELECT date, latitude, longitude, radius, n, e, c, f FROM sat_sec_plain WHERE code='%s' " \

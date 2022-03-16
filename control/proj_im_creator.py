@@ -1,6 +1,7 @@
 import numpy as np
 
 from engine.sword import SWORD
+from tools.data_to_txt import TextData
 from tools.data_foo import *
 from tools.ionomodel_foo import get_ionomodel_surf_file
 
@@ -8,10 +9,11 @@ def get_proj_image(swarm_info, proj_type,
                    ionomodel_param=None, draw_auroral_s=None,
                    draw_auroral_n=None, draw_shape=None, draw_vector_diff=False,
                    intermag_observ_code=None, measure_mu=False, mag_grid_coord=False,
-                   cut_swarm_value_bool=False, cut_obs_swarm_value_bool=False, swarm_poly_loc=None, proj_extend_loc=None, annotate_sw_value_bool=False, cut_deg_radius=5):
+                   cut_swarm_value_bool=False, cut_obs_swarm_value_bool=False, swarm_poly_loc=None, proj_extend_loc=None,
+                   annotate_sw_value_bool=False, cut_deg_radius=5, txt_out=False):
     swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values_nec = swarm_info[0]   # swarm_set
     from_date, to_date, swarm_channel = swarm_info[1], swarm_info[2], swarm_info[3]
-    custom_value_name = None
+    td = TextData(SWARM_liter=swarm_liter)
 
 
     #   приближение до OBS области
@@ -55,19 +57,24 @@ def get_proj_image(swarm_info, proj_type,
         #TODO iono
         ax_label += ' iono_s+'
         #        ax_label += 'iono_n+'
+        td.append(s_fac_surf, name='ionomodel')
+        td.ionomodel_shp = 'n'
 
     #   отрисовка на проекции аврорального овала
     if draw_auroral_s is not None:
-        x, y, z = get_auroral_flux(draw_auroral_s, hemishpere='S')  # f(dt)
+        x, y, z, yxz = get_auroral_flux(draw_auroral_s, hemishpere='S')  # f(dt)
         sword.draw_avroral_oval([x,y,z], hemisphere='south')
         #sword.draw_mag_coord_lines(swarm_date[0])
         ax_label += ' auroral+'
+        td.append(yxz, name='auroralS')
+        td.auroral_shp = 's'
     if draw_auroral_n is not None:
-        x, y, z = get_auroral_flux(draw_auroral_n, hemishpere='N')  # f(dt)
+        x, y, z, yxz = get_auroral_flux(draw_auroral_n, hemishpere='N')  # f(dt)
         sword.draw_avroral_oval([x,y,z], hemisphere='north')
         #sword.draw_mag_coord_lines(swarm_date[0])
         ax_label += ' auroral+'
-
+        td.append(yxz, name='auroralN')
+        td.auroral_shp = 'n'
 
     #   отрисовка на проекции shape файла
     if draw_shape is not None:
@@ -89,15 +96,13 @@ def get_proj_image(swarm_info, proj_type,
     if len(np.array(swarm_values_nec).shape) > 1 and swarm_channel is not None:
         swarm_values = swarm_values_nec[:, swarm_channel]
         legend_label = ['dBn', 'dBe', 'dBd'][swarm_channel]
+        td.SWARM_channel = ['N', 'E', 'C'][swarm_channel]
     else:
         swarm_values = swarm_values_nec  # fac2
         legend_label = 'fac2'
-    if measure_mu:
-        swarm_values = get_measure_mu(swarm_values)
-        ax_label += ' measure_mu '
-        legend_label = 'mu'
+        td.SWARM_channel = 'FAC2'
 
-
+    td.annotate = ax_label
 
     # выбор точек измерений SWARM в указанном полигоне
     # lat, lon
@@ -143,9 +148,7 @@ def get_proj_image(swarm_info, proj_type,
         swarm_values_full_in_poly = swarm_values_nec
         swarm_date_in_poly = swarm_date
 
-
-
-
+    td.append(swarm_pos_in_poly, name='SWARM_pos')
     # отрисовка вектора (X, Y, n, e) или (X, Y, |n-x|, |e-y|)
     if draw_vector_diff:
         #vector_components = swarm_values_nec[:, :2]   # n,e component
@@ -158,8 +161,15 @@ def get_proj_image(swarm_info, proj_type,
         # convert to geomagnetic coords
         #swarm_pos_in_poly = geo2mag(swarm_pos_in_poly, swarm_date_in_poly)
         sword.draw_vector(swarm_pos_in_poly, B=vector_components)
+        td.append(swarm_values_in_poly, name='SWARM_IGRF')
 
-
+    elif measure_mu:
+        swarm_values_in_poly = get_measure_mu(swarm_values_in_poly)
+        ax_label += ' measure_mu '
+        legend_label = 'mu'
+        td.append(swarm_values, name='measure_mu')
+    else:
+        td.append(swarm_values_in_poly, name='SWARM')
 
     """    
         if convert_coord is not None:
@@ -189,8 +199,15 @@ def get_proj_image(swarm_info, proj_type,
         sword.set_axis_label(ax_label, zoom_axis=True)
     else:
         sword.set_axis_label(ax_label)
-    im = sword.fig_to_PIL_image()
-    return im
+
+
+    if txt_out:
+        out = td.stack_data_to_txt()
+    else:
+        out = sword.fig_to_PIL_image()
+
+    status = 1
+    return (status, out)
 
 
 def get_plot_im(swarm_sets, labels, include, channel, delta, ground_station=None):
@@ -235,4 +252,5 @@ def get_plot_im(swarm_sets, labels, include, channel, delta, ground_station=None
 
     im = sword.fig_to_PIL_image()
     # im.save(STATIC_OS_PATH + '/media/images/2.png')
-    return im
+    status = 1
+    return (status, im)

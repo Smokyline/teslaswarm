@@ -457,17 +457,19 @@ def get_auroral_flux(dt, atype='diff', jtype='energy', hemishpere='N'):
         yi = np.linspace(YN.min(), YN.max() + 1, 150)
         value = griddata((XN, YN), fluxgridN.flatten(), (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
         XX, YY = np.meshgrid(xi, yi)
+        x_2d, y_2d, value_2d = XN, YN, fluxgridN.flatten()
 
     else:
         xi = np.linspace(XS.min(), XS.max() + 1, 150)
         yi = np.linspace(YS.min(), YS.max() + 1, 150)
         value = griddata((XS, YS), fluxgridS.flatten(), (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
         XX, YY = np.meshgrid(xi, yi)
+        x_2d, y_2d, value_2d = XS, YS, fluxgridS.flatten()
 
     #   lat, lon, fluxgridN  north
     #   lat, lon, fluxgridS  south
 
-    return XX, YY, value
+    return XX, YY, value, np.array([y_2d, x_2d, value_2d]).T
 
 
 def get_nearest_auroral_point_to_swarm(swarm_set):
@@ -619,7 +621,6 @@ def get_sMAGstation_value_by_time(date_array, time_array, channel, delta, statio
         return np.array(extend_station_data)
 
 
-    #TODO edit data finder
 
     station_data = get_superMAG_value_from_web(date_array[0], station)
     this_day_time_array = np.arange(station_data[0, 0], station_data[0, 0] + datetime.timedelta(days=1),
