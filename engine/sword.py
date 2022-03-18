@@ -1,3 +1,5 @@
+import datetime
+
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -158,6 +160,8 @@ class SWORD():
             #str_ticks = [decode_dt_param(d + 'T' + t).strftime('%c') for d, t in zip(date_list, time_list)]
             str_ticks = time_list
             date_ticks = np.array([[x, label] for x, label in zip(np.arange(len(time_list)), str_ticks)])
+            ax1.plot(np.arange(len(time_list)), value, c='r', label=label)
+
 
             magcoord_pos = np.array(np.round(mag2mlt(geo2mag(pos, date_list, to_coord='GSM')[:, :2], date_list, time_list), 2)).astype(str)
             #magcoord_pos = np.array(np.round(mag2mlt(pos[:, :2], date_list, time_list), 2)).astype(str)
@@ -175,25 +179,32 @@ class SWORD():
             coord_ticks = np.array([''.join(x) for x in zip(coord_ticks[0::2], coord_ticks[1::2])])
             coordtick_locations = np.arange(len(pos))
 
-
             # decode from str to datetime format
             points_time = np.array([decode_str_dt_param(d + 'T' + t) for d, t in zip(date_list, time_list)], dtype='datetime64')
-            last_point = points_time[0]
-            line_idx = []
-            for k, point_time in enumerate(points_time):
-                minute_before = point_time - np.timedelta64(1, 'm')
-                if minute_before == last_point:
-                    last_point = point_time
-                    line_idx.append(k)
+
             if len(date_ticks) >= 12:
-                date_ticks = date_ticks[line_idx]
-                coord_ticks_arange = np.arange(0, len(coord_ticks), int(len(coord_ticks) / 14))
+
+                if points_time[-1]-points_time[0] < np.timedelta64(1, 'h'):     # отрисовка vlines раз в минуту
+                    coord_ticks_arange = np.arange(0, len(coord_ticks), int(len(coord_ticks) / 14))  # top xlabels tick
+                    last_point = points_time[0]
+                    line_idx = []
+                    for k, point_time in enumerate(points_time):
+                        if points_time[-1] - points_time[0] > np.timedelta64(30, 'm'):
+                            minute_before = point_time - np.timedelta64(5, 'm')
+                        else:
+                            minute_before = point_time - np.timedelta64(1, 'm')
+                        if minute_before == last_point:
+                            last_point = point_time
+                            line_idx.append(k)
+                    date_ticks = date_ticks[line_idx]
+                    ax1.vlines(x=line_idx, ymin=np.min(value), ymax=np.max(value), color='b', linestyle='--', alpha=.5)
+                else:
+                    coord_ticks_arange = np.arange(0, len(coord_ticks), int(len(coord_ticks) / 14))  # top xlabels tick
+                    date_ticks = date_ticks[coord_ticks_arange]
+
             else:
                 coord_ticks_arange = np.arange(0, len(coord_ticks))
-            ax1.vlines(x=line_idx, ymin=np.min(value), ymax=np.max(value), color='b', linestyle='--', alpha=.5)
 
-
-            ax1.plot(np.arange(len(time_list)), value, c='r', label=label)
             if include[i] is not None:
                 ax1.plot(np.arange(len(include[i])), include[i], c='b', label='auroral')
             if draw_station is not None:
@@ -205,12 +216,12 @@ class SWORD():
                     obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=ch_where_nec, delta=delta, station=draw_station)
                     ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, ch_str))
 
-                except:
+                except Exception as e:
+                    print('superMAG Exception:', e)
                     if ch_str == 'fac2':
                         for chnl in [0, 1, 2]:     # n, e, c
                             obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=chnl, delta=delta, station=draw_station)
                             ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, channels[chnl]))
-
             if 'fac2' in label:
                 label += ' nA/m²'
             else:
@@ -218,7 +229,7 @@ class SWORD():
             ax1.annotate("MLat MLT\n\nLat Lon", xy=(-.05, 1.03), xycoords="axes fraction")
             ax1.set_ylabel(label)
             ax1.set_xticks(np.array(date_ticks[:, 0]).astype(int))
-            ax1.set_xticklabels(date_ticks[:, 1])
+            ax1.set_xticklabels(date_ticks[:, 1], rotation=40)
 
             ax2.set_xlim(ax1.get_xlim())
             ax2.set_xticks(coordtick_locations[coord_ticks_arange])
@@ -454,12 +465,12 @@ class SWORD():
                 self.ax.plot(x, y, transform=lccproj, zorder=1)
 
 
-    def draw_point_with_annotate(self, points):
+    def draw_point_with_annotate(self, point):
         #   for intermag observ for example
-        for point in points:
-            x, y, annotate = float(point[0]), float(point[1]), str(point[2])
-            self.ax.scatter(x, y, c='r', marker='*', transform=ccrs.PlateCarree())
-            self.ax.text(x, y, annotate, transform=ccrs.PlateCarree(), fontsize=10)
+        #for point in points:
+        x, y, annotate = float(point[0]), float(point[1]), str(point[2])
+        self.ax.scatter(x, y, c='r', marker='*', transform=ccrs.PlateCarree())
+        self.ax.text(x, y, annotate, transform=ccrs.PlateCarree(), fontsize=10)
 
     def draw_colorbar(self, values, cmap, label, vcenter=None, vmin=None):
         if vmin is not None:
@@ -482,12 +493,12 @@ class SWORD():
 
         sm._A = []
         if self.proj_type == 'miller':
-            rotation, orientation = 0, 'horizontal'
+            rotation, orientation, l_pad = 0, 'horizontal', -40
         else:
-            rotation, orientation = 270, 'vertical'
+            rotation, orientation, l_pad = 270, 'vertical', 0
         #   https://stackoverflow.com/questions/15908371/matplotlib-colorbars-and-its-text-labels
         cb = plt.colorbar(sm, ax=self.ax, shrink=0.4, orientation=orientation, fraction=0.046, pad=0.015)
-        cb.set_label(label, labelpad=-40, rotation=rotation)
+        cb.set_label(label, labelpad=l_pad, rotation=rotation)
         return cmap_args
 
     def draw_polygon(self, poly):

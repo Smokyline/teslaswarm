@@ -1,25 +1,14 @@
 from django.core.mail import send_mail
 from django.shortcuts import render
 from teslaswarm import settings
-
+from django.http import HttpResponse
 import os
 from tools.dt_foo import decode_str_dt_param
-from engine.stacker import stack_images, single_image
 from teslaswarm.settings import STATIC_OS_PATH, STATICFILES_DIRS
 from control.request_control import teslaswarmControl
 
 def get_image_page(request):
     # main backend foo
-
-    def save_single_image(im, id):
-        out_image = single_image(im)
-        out_image.save(STATIC_OS_PATH + '/media/images/request/%s.jpg'%id)
-
-    def save_fourths_image(im1, im2, im3, im4, id):
-        out_image = stack_images(2000, im1, im2, im3, im4)
-        out_image.save(STATIC_OS_PATH + '/media/images/request/%s.jpg'%id)
-
-
 
     original_umask = os.umask(0)
 
@@ -31,11 +20,16 @@ def get_image_page(request):
         'from_date',    # str   2019-5-13T22:59:59
         'to_date',      # str   2019-5-13T22:59:59
         'sw_channel',   # str
-        # 'supermag_obs',   # str
+        'supermag_obs',   # str
         'annotate_sw_value',    # bool
-        'ionomodel_date',  # str
-        'ionomodel_n',  # bool
-        'ionomodel_s',  # bool
+        'dataType',  # str
+        'hemisphere',  # str
+        'iono_bz',  # str
+        'iono_by',  # str
+        'iono_kp',  # str
+        'iono_f107',  # str
+        'iono_doy',  # str
+        'iono_ut',  # str
         'auroral_date', # str
         'auroral_n',    # bool
         'auroral_s',    # bool
@@ -46,7 +40,7 @@ def get_image_page(request):
         'deg_radius',   # float
         'igrf_vector_diff',  # bool
         'measure_mu',   # bool
-        #'mag_grid',   # bool
+        'mag_grid',   # bool
         #'shape',        # file
         'near_auroral_points',  # bool
         'txt_out',  # bool
@@ -105,18 +99,13 @@ def get_image_page(request):
             SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], fac2_mod=fac2_mod)
 
     #   модель ионосферы
-    if param_dict['ionomodel_n'] == 'true' or param_dict['ionomodel_s'] == 'true':
-        #TODO ionomodel date
-        ionomodel_date = decode_str_dt_param(param_dict['ionomodel_date'])
-        if param_dict['ionomodel_n'] == 'true':
-            ionomodel_n = True
-        else:
-            ionomodel_n = False
-        if  param_dict['ionomodel_s'] == 'true':
-            ionomodel_s = True
-        else:
-            ionomodel_s = False
-        sm.set_ionomodel(request=None)
+    if not ('undefined' in str(param_dict['iono_bz'])):
+        iono_param = [param_dict['dataType'], param_dict['hemisphere'], param_dict['iono_bz'], param_dict['iono_by'],
+                      param_dict['iono_doy'], param_dict['iono_kp'], param_dict['iono_ut'], param_dict['iono_f107']]
+
+    else:
+        iono_param = None
+    sm.set_ionomodel(param=iono_param)
 
     #   модель аврорального овала
     if param_dict['auroral_n'] == 'true' or param_dict['auroral_s'] == 'true':
@@ -142,6 +131,10 @@ def get_image_page(request):
     if not ('undefined' in str(param_dict['obs_code'])):
         sm.set_obs_codes(codes=param_dict['obs_code'], deg_radius=float(param_dict['deg_radius']), cut_obs_swarm_value=True)
 
+    if not ('-' in str(param_dict['supermag_obs'])):
+        sm.set_supermag_obs_codes(codes=param_dict['supermag_obs'])
+
+
     # vector difference between swarm and IGRF-13 model
     if param_dict['igrf_vector_diff'] == 'true':
         igrf_vector_diff = True
@@ -154,20 +147,23 @@ def get_image_page(request):
         measure_mu = True
     else:
         measure_mu = False
-        sm.set_measure_mu(b=measure_mu)
+    sm.set_measure_mu(b=measure_mu)
 
     # геомагнитная сетка координат mag_coordinate_system_lines
     if param_dict['mag_grid'] == 'true':
         mag_grid = True
     else:
         mag_grid = False
-        sm.mag_grid(b=mag_grid)
+    sm.set_mag_grid_coord(b=mag_grid)
 
     #TODO add file import
     #if param_dict['shape'] == 'true':
     sm.set_shape_file(file=None)
 
+    if param_dict['txt_out'] == 'true':
+        sm.set_txt_out(b=True)
 
+    print(vars(sm))
     ###############################################
     if param_dict['proj_type'] == 'plot':
         # append auroral value to plot
@@ -205,19 +201,22 @@ def get_image_page(request):
                     station = param_dict['supermag_obs']
 
 
-        print(bool_set, '=> plot sets:', len(swarm_sets), labels, 'include:')
-        im = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, include=include_data, sw_channel=sw_channel, delta=delta, station=station)
+        print(bool_set, '=> plot sets:', len(swarm_sets), labels, 'include:', include_data, 'superMAG station:', station)
+        (status, message) = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, include=include_data, sw_channel=sw_channel, delta=delta, station=station)
     else:
-        im = sm.get_projection_image(swarm_set=SWARM_SET, swarm_channel=sw_channel, proj_type=param_dict['proj_type'],
+        (status, message) = sm.get_projection_image(swarm_set=SWARM_SET, swarm_channel=sw_channel, proj_type=param_dict['proj_type'],
                                   annotate_sw_value_bool=annotate_sw_value_bool)
+    os.umask(original_umask)
 
-    if param_dict['txt_out'] == 'true':
-        #txt
-        os.umask(original_umask)
-        return render(request, "index.html", context)   #{{ file_content }}.
+    id = message
+    if sm.txt_out:
+        data_file = open(STATIC_OS_PATH + '/media/txt/%s.txt' % id, 'r', encoding="utf-8")
+        data = data_file.readlines()
+        """context = {'context': data}
+        return render(request, "show_txt.html", context)   #{{ file_content }}."""
+        #response_content = '\n'.join(lines)
+        return HttpResponse(data, content_type="text/plain")
     else:
-        save_single_image(im, id)
-        os.umask(original_umask)
         return render(request, 'show_image.html', {'STATIC_URL': settings.STATIC_URL, 'IMAGE_NAME': id})
 
 

@@ -7,7 +7,7 @@ import numpy as np
 from tools.data_foo import *
 from tools.dt_foo import get_timestamp
 from control.proj_im_creator import *
-
+from engine.stacker import stack_images, single_image
 # Find code directory relative to our directory
 sys.path.append(os.getcwd())
 from teslaswarm.settings import STATIC_OS_PATH
@@ -28,6 +28,7 @@ class teslaswarmControl():
         self.proj_extend_loc = None     # [-lon, +lon, -lat, +lat]
         self.swarm_poly_loc = None      # [[-90, 50], [-90, 90], [25, 90], [25,50], [-90, 50]]
         self.intermag_observ_code = None    # ['SFS']
+        self.supermag_observ_code = None    # ['SFS']
 
         self.swarm_value_delta = 300
         self.deg_radius = 5
@@ -37,29 +38,64 @@ class teslaswarmControl():
         self.measure_mu = False
         self.mag_grid_coord = False
         self.draw_shape = False
+        self.txt_out = False
 
     def get_id(self):
-        return get_timestamp()
+        self.id = get_timestamp()
+        return self.id
+
+
+    def save_single_image(self, im):
+        out_image = single_image(im)
+        out_image.save(STATIC_OS_PATH + '/media/images/request/%s.jpg'%self.id)
+
+    def save_fourths_image(self, im1, im2, im3, im4):
+        out_image = stack_images(2000, im1, im2, im3, im4)
+        out_image.save(STATIC_OS_PATH + '/media/images/request/%s.jpg'%self.id)
 
     def set_swarm_value_delta(self, value):
         self.swarm_value_delta = value
 
-    def set_ionomodel(self, request):
+    def set_ionomodel(self, param=None):
         # ionomodel?type=fac&hem=n&bz=1&f107=100&by=1&doy=1&kp=1&ut=1&img_w=800&img_h=600&out=plot
-        param_name = ['type', 'hem', 'bz', 'f107', 'by', 'doy', 'kp', 'ut']
-        #param_dict = {}
-        #for p in param_name:
-        #    param_dict[p] = request.GET[p]
-        param_dict = {
-            'type': 'fac',
-            'hem': 'n',
-            'bz': '6',
-            'f107': '100',
-            'by': '6',
-            'doy': '1',
-            'kp': '1',
-            'ut': '1'
-        }
+        if param is not None:
+            param_dict = {
+                'type': 'fac',
+                'hem': 'n',
+                'bz': '6',
+                'f107': '100',
+                'by': '6',
+                'doy': '1',
+                'kp': '1',
+                'ut': '1'
+            }
+            for i, p in enumerate(param):
+                if i == 0:
+                    if p == 'FAC':
+                        param_dict['type'] = 'fac'
+                    elif p == 'Potential':
+                        param_dict['type'] = 'pot'
+                    elif p == 'sigH':
+                        param_dict['type'] = 'sigh'
+                if i == 1:
+                    if p == 'Northern':
+                        param_dict['hem'] = 'n'
+                    elif p == 'Southern':
+                        param_dict['hem'] = 's'
+                if i == 2:
+                    param_dict['bz'] = p
+                if i == 3:
+                    param_dict['by'] = p
+                if i == 4:
+                    param_dict['doy'] = p
+                if i == 5:
+                    param_dict['kp'] = p
+                if i == 6:
+                    param_dict['ut'] = p
+                if i == 7:
+                    param_dict['f107'] = p
+        else:
+            param_dict = None
         self.ionomodel_param = param_dict
 
     def set_auroral_oval(self, north=False, south=False, date=None):
@@ -79,18 +115,25 @@ class teslaswarmControl():
         self.deg_radius = deg_radius
         self.cut_obs_swarm_value_bool = cut_obs_swarm_value
 
+    def set_supermag_obs_codes(self, codes=None):
+        self.supermag_observ_code = codes
+        #TODO im creator
+
     def set_swarm_igrf_vectorDiff(self, b=False):
         self.draw_vector_diff = b
 
     def set_measure_mu(self, b=False):
         self.measure_mu = b
 
-    def mag_grid_coord(self, b=False):
+    def set_mag_grid_coord(self, b=False):
         self.mag_grid_coord = b
 
     def set_shape_file(self, file):
         # TODO import file
         self.draw_shape = file
+
+    def set_txt_out(self, b=False):
+        self.txt_out = b
 
     def get_swarm_set(self, sw_liter='A', fac2_mod=False):
         #   получение датасета данных SWARM_X
@@ -135,14 +178,19 @@ class teslaswarmControl():
         """
         swarm_info = [swarm_set, self.from_date, self.to_date, swarm_channel]
 
-        im = get_proj_image(swarm_info=swarm_info, proj_type=proj_type,
+        (status, out) = get_proj_image(swarm_info=swarm_info, proj_type=proj_type,
                              ionomodel_param=self.ionomodel_param, draw_auroral_s=self.draw_auroral_s,
                              draw_auroral_n=self.draw_auroral_n, draw_shape=self.draw_shape, draw_vector_diff=self.draw_vector_diff,
                              intermag_observ_code=self.intermag_observ_code, measure_mu=self.measure_mu, mag_grid_coord=self.mag_grid_coord,
                              cut_swarm_value_bool=self.cut_swarm_value_bool, cut_obs_swarm_value_bool=self.cut_obs_swarm_value_bool,
                              swarm_poly_loc=self.swarm_poly_loc, proj_extend_loc=self.proj_extend_loc,
-                             annotate_sw_value_bool=annotate_sw_value_bool, cut_deg_radius=self.deg_radius)
-        return im   # Image.open(buf)
+                             annotate_sw_value_bool=annotate_sw_value_bool, cut_deg_radius=self.deg_radius, txt_out=self.txt_out)
+        if status == 1 and self.txt_out:
+            message = out
+        if status == 1 and self.txt_out == False:
+            self.save_single_image(out)
+            message = self.id
+        return (status, message)   # Image.open(buf)
 
     def get_plotted_image(self, swarm_sets, labels, include, sw_channel, delta, station):
         """
@@ -150,13 +198,15 @@ class teslaswarmControl():
         swarm_sets=[fac_set_A, fac_set_B, C]
         swarm_sets=[fac_set_A, fac_set_B]
         """
-        im = get_plot_im(swarm_sets=swarm_sets,
+        (status, out) = get_plot_im(swarm_sets=swarm_sets,
                          labels=labels,
                          include=include,
                          channel=sw_channel,
                          delta=delta,
                          ground_station=station)
-
-        return im   # Image.open(buf)
+        if status == 1:
+            self.save_single_image(out)
+            message = self.id
+        return (status, message)
 
 

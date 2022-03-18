@@ -334,7 +334,8 @@ def SuperMAGGetData(logon,start,extent,flagstring,station,**kwargs):
   print(indices)
   urlstr += indices
   urlstr += '&ground_station='+station.upper()
-  
+  print(urlstr)
+
   (status,data_list)=sm_GetUrl(urlstr,'json')
 
   # default is to return a dataframe, but can also return an array
@@ -403,7 +404,7 @@ def sm_microtest(choice,userid):
 
 def supermag_testing(userid):
 
-  start=[2019,11,15,10,40,00] # alt: start='2019-11-15T10:40'
+  start=[2017,9,18,10,40,00] # alt: start='2019-11-15T10:40'
 
   (status,stations) = SuperMAGGetInventory(userid,start,3600)
 

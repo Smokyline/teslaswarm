@@ -12,14 +12,14 @@ from control.proj_im_creator import *
 sys.path.append(os.getcwd())
 from teslaswarm.settings import STATIC_OS_PATH
 
-intermag_observ_code = ['RBY', 'CDR', 'IQA', 'SALU', 'KJPK']
+intermag_observ_code = ['RBY']
 cut_obs_swarm_value_bool = False
-sw_liter = 'B'
+sw_liter = 'A'
 sw_channel = 0
-from_date = '2017-09-18T02:25:00'
-to_date = '2017-09-18T02:45:00'
+from_date = '2017-09-18T02:05:00'
+to_date = '2017-09-18T02:15:00'
 auroral_date = '2017-9-18T02:35:00'
-delta = 3
+delta = 30
 
 auroral_date = decode_str_dt_param(auroral_date)
 from_date, to_date = decode_str_dt_param(from_date), decode_str_dt_param(to_date)
@@ -40,7 +40,7 @@ swarm_set_A = get_swarm_set('A', from_date, to_date, delta=delta, fac2_mod=False
 X, Y = swarm_pos[:, 0], swarm_pos[:, 1]
 Z = swarm_values.ravel()"""
 
-fac_set_A = get_swarm_set('A', from_date, to_date, delta=delta, fac2_mod=True)
+#fac_set_A = get_swarm_set('A', from_date, to_date, delta=delta, fac2_mod=True)
 #fac_set_B = get_swarm_set('B', from_date, to_date, delta=delta, fac2_mod=True)
 #fac_set_C = get_swarm_set('C', from_date, to_date, delta=delta, fac2_mod=True)
 #   if use in plot -> sw_channel = None
@@ -78,17 +78,17 @@ proj_extend_loc = [-100, -60, 50, 75]    #  [-x, +x, -y, +y]
 """
 
 #   swarm_info=[fac_set_A, from_date, to_date, sw_channel]
-im1 = get_proj_image(swarm_info=[swarm_set_A, from_date, to_date, sw_channel],
+(status, im1) = get_proj_image(swarm_info=[swarm_set_A, from_date, to_date, sw_channel],
                      #swarm_info=[fac_set_A, from_date, to_date, None],
                      #proj_type='ortho_n', draw_auroral_n=auroral_date,)
                      #proj_type='ortho_n',
                      proj_type='miller',
                      #draw_vector_diff=True,
                      #proj_extend_loc=proj_extend_loc,
-                     draw_auroral_n=auroral_date,
+                     #draw_auroral_n=auroral_date,
                     #draw_ionomodel_s=True,
 
-                        txt_out=True
+                        #txt_out=True
                      )
 """im2 = projection_im(swarm_info=[swarm_set_A, from_date, to_date, sw_channel],
                     proj_type='ortho_s', draw_ionomodel_s=True, proj_extend_loc=[1, 360, -45, -90])
@@ -110,15 +110,16 @@ im3 = projection_im(swarm_info=[swarm_set_B, from_date, to_date, sw_channel],
 #im4 = get_plot_im(swarm_sets=[swarm_set_A], labels=['swarm-A n', None, None ], include=[None, None, None], channel=0, obs='SALU')
 
 #im4 = get_plot_im(swarm_sets=[swarm_set_A], labels=['swarm-A n', 'swarm-A e', 'swarm-A c' ], include=[None, None, None], channel=None, delta=delta, ground_station='T47')
-#im4 = get_plot_im(swarm_sets=[fac_set_A], labels=['swarm-A fac2', None, None ], include=[None, None, None], channel=None, delta=delta, ground_station='T47')
+#im4 = get_plot_im(swarm_sets=[fac_set_A], labels=['swarm-A fac2', None, None ], include=[None, None, None], channel=None, delta=delta, ground_station='AAA')
+(status, im4) = get_plot_im(swarm_sets=[swarm_set_A], labels=['swarm-A n', None, None ], include=[None, None, None], channel=0, delta=delta, ground_station=None)
 
 #   fourths
 #out_image = stack_images(2000, im1, im2, im3, im4)
 #out_image.save(STATIC_OS_PATH + '/media/images/test_v8.png')
 
 #   single
-out_image = single_image(im1)
-#out_image = single_image(im4)
+#out_image = single_image(im1)
+out_image = single_image(im4)
 filename = 'single_test_v16_test'
 
 

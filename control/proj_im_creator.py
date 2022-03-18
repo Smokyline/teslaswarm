@@ -52,13 +52,16 @@ def get_proj_image(swarm_info, proj_type,
 
     #   отрисовка на проекции иономодели
     if ionomodel_param is not None:
-        s_fac_surf = get_ionomodel_surf_file(ionomodel_param)
-        sword.draw_ionomodel(s_fac_surf, type=['south', 'seismic'])
-        #TODO iono
-        ax_label += ' iono_s+'
-        #        ax_label += 'iono_n+'
-        td.append(s_fac_surf, name='ionomodel')
-        td.ionomodel_shp = 'n'
+        fac_surf = get_ionomodel_surf_file(ionomodel_param)
+        if ionomodel_param['hem'] == 'n':
+            sword.draw_ionomodel(fac_surf, type=['northern', 'seismic'])
+            td.ionomodel_shp = 'n'
+        elif ionomodel_param['hem'] == 's':
+            sword.draw_ionomodel(fac_surf, type=['southern', 'seismic'])
+            td.ionomodel_shp = 's'
+        td.append(fac_surf, name='ionomodel')
+        ax_label += ' iono+'
+
 
     #   отрисовка на проекции аврорального овала
     if draw_auroral_s is not None:
@@ -125,9 +128,9 @@ def get_proj_image(swarm_info, proj_type,
             print('cut swarm_pos near obs')
             #p_in_p, poly = get_swarm_value_near_obs(swarm_pos, intermag_observ_code, proj_type)
             p_in_p = get_position_near_point(swarm_pos[:, :2], intermag_observ_code, degr_radius=cut_deg_radius)
-        print(len(swarm_pos))
-        print(len(p_in_p))
-        print(p_in_p)
+        #print(len(swarm_pos))
+        #print(len(p_in_p))
+        #print(p_in_p)
         swarm_pos_in_poly = swarm_pos[p_in_p]
         swarm_values_in_poly = swarm_values[p_in_p]
         swarm_values_full_in_poly = swarm_values_nec[p_in_p]
@@ -202,7 +205,8 @@ def get_proj_image(swarm_info, proj_type,
 
 
     if txt_out:
-        out = td.stack_data_to_txt()
+        td.save_proj_data_to_txt()
+        out = td.id
     else:
         out = sword.fig_to_PIL_image()
 
