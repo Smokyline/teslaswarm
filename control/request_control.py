@@ -12,6 +12,7 @@ from engine.stacker import stack_images, single_image
 sys.path.append(os.getcwd())
 from teslaswarm.settings import STATIC_OS_PATH
 
+
 class teslaswarmControl():
     def __init__(self, from_date, to_date):
         # swarm
@@ -146,11 +147,6 @@ class teslaswarmControl():
         swarm_set_AC = ["|AC|", sw_coord, swarm_set_A[2], swarm_set_A[3], sw_respond]
         return swarm_set_AC
 
-    def get_near_auroral_points_to_swarm(self, swarm_set):
-        #   получение массива значений аврорального овала вблизи пролета спутника SWARM
-        auroral_to_swarm_A = get_nearest_auroral_point_to_swarm(swarm_set)
-        return auroral_to_swarm_A
-
     def get_strParam2arrayParam(self, param):
         paramlist = param.split(":")
         floatlist = []
@@ -190,21 +186,21 @@ class teslaswarmControl():
         if status == 1 and self.txt_out == False:
             self.save_single_image(out)
             message = self.id
+        if status == 0:
+            message = out
         return (status, message)   # Image.open(buf)
 
-    def get_plotted_image(self, swarm_sets, labels, include, sw_channel, delta, station):
+    def get_plotted_image(self, swarm_sets, labels, auroral, sw_channel, delta, station):
         """
         swarm_sets, labels, include, channel
         swarm_sets=[fac_set_A, fac_set_B, C]
         swarm_sets=[fac_set_A, fac_set_B]
         """
-        (status, out) = get_plot_im(swarm_sets=swarm_sets,
-                         labels=labels,
-                         include=include,
-                         channel=sw_channel,
-                         delta=delta,
-                         ground_station=station)
-        if status == 1:
+        (status, out) = get_plot_im(swarm_sets, labels, auroral, sw_channel, delta, station, self.txt_out)
+
+        if status == 1 and self.txt_out:
+            message = out
+        if status == 1 and self.txt_out == False:
             self.save_single_image(out)
             message = self.id
         return (status, message)

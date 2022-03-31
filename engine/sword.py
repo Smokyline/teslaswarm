@@ -1,5 +1,6 @@
 import datetime
 
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -45,8 +46,8 @@ class SWORD():
         if proj_type == 'ortho_n':
             projection = ccrs.Orthographic(central_latitude=90., central_longitude=0)
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
-            fig = plt.figure(figsize=(22, 22))  # a*dpi x b*dpi aka 3000px x 3000px
-            ax = fig.add_subplot(1, 1, 1, projection=projection)
+            self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
+            ax = self.fig.add_subplot(1, 1, 1, projection=projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
             ax.coastlines(resolution='110m', color='k', zorder=7)
             ax.add_feature(cfeature.LAND, facecolor='0.75', zorder=0)
@@ -68,8 +69,8 @@ class SWORD():
         if proj_type == 'ortho_s':
             projection = ccrs.Orthographic(central_latitude=-90., central_longitude=0)
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
-            fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
-            ax = fig.add_subplot(1, 1, 1, projection=projection)
+            self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
+            ax = self.fig.add_subplot(1, 1, 1, projection=projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
             ax.coastlines(resolution='110m', color='k', zorder=7)
             ax.add_feature(cfeature.LAND, facecolor='0.75', zorder=0)
@@ -91,8 +92,8 @@ class SWORD():
             projection = ccrs.Miller()
             #projection = ccrs.PlateCarree()
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
-            fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
-            ax = fig.add_subplot(1, 1, 1, projection=projection)
+            self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
+            ax = self.fig.add_subplot(1, 1, 1, projection=projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
             ax.coastlines(resolution='50m', color='k', zorder=7)
             ax.add_feature(cfeature.LAND, facecolor='0.75', zorder=0)
@@ -123,9 +124,9 @@ class SWORD():
         #plt.gca().xaxis.set_major_locator(plt.NullLocator())
         #plt.gca().yaxis.set_major_locator(plt.NullLocator())
 
-    def draw_plot(self, draw_list, include=None, delta=1, draw_station=None):
+    def draw_plot(self, draw_list, auroral_list, delta=1, draw_station=None):
         # long_set
-        short_set, long_set = False, False
+        """short_set, long_set = False, False
         if len(draw_list) == 1:
             short_set = True
         elif len(draw_list) > 1:
@@ -133,24 +134,27 @@ class SWORD():
 
         #   отрисовка графика
         if short_set:
-            fig = plt.figure(figsize=(20, 20))
+            fig = plt.figure(figsize=(15, 15))
             #axs = host_subplot(111, axes_class=axisartist.Axes)
             axs = fig.add_subplot(111)
             axs.set_aspect('auto')
         elif long_set:
-            fig, axs = plt.subplots(len(draw_list), figsize=(20, 20))
+            fig, axs = plt.subplots(len(draw_list), figsize=(20, 10*len(draw_list)))
+        fig.subplots_adjust(right=0.8)"""
+        fig, axs = plt.subplots(ncols=1, nrows=len(draw_list), figsize=(15, 5*len(draw_list)),
+                                constrained_layout=True)
 
         for i, sw_set in enumerate(draw_list):
             label, date_list, time_list, value, pos = sw_set
-            if short_set:
-                ax1 = axs
-                ax2 = ax1.twiny()
-                ax3 = ax2.twinx()
-
+            """if short_set:
+                host = axs
             elif long_set:
-                ax1 = axs[i]
-                ax2 = ax1.twiny()
-                ax3 = ax2.twinx()
+                host = axs[i]"""
+            if len(draw_list) == 1:
+                host = axs
+            elif len(draw_list) > 1:
+                host = axs[i]
+            ax2 = host.twiny()
 
             """if len(np.array(sw_set[4]).shape) > 1:
                 Z = np.array(sw_set[4])[:, i]
@@ -160,7 +164,7 @@ class SWORD():
             #str_ticks = [decode_dt_param(d + 'T' + t).strftime('%c') for d, t in zip(date_list, time_list)]
             str_ticks = time_list
             date_ticks = np.array([[x, label] for x, label in zip(np.arange(len(time_list)), str_ticks)])
-            ax1.plot(np.arange(len(time_list)), value, c='r', label=label)
+            host.plot(np.arange(len(time_list)), value, c='r', label=label)
 
 
             magcoord_pos = np.array(np.round(mag2mlt(geo2mag(pos, date_list, to_coord='GSM')[:, :2], date_list, time_list), 2)).astype(str)
@@ -173,8 +177,8 @@ class SWORD():
 
             coord_ticks = []
             for mag, geo in zip(magcoord_pos, coord_pos):
-                coord_ticks.append(str(mag))
-                coord_ticks.append('\n\n'+str(geo))
+                    coord_ticks.append(str(mag))
+                    coord_ticks.append('\n\n' + str(geo))
             coord_ticks = np.array(coord_ticks).astype(str)
             coord_ticks = np.array([''.join(x) for x in zip(coord_ticks[0::2], coord_ticks[1::2])])
             coordtick_locations = np.arange(len(pos))
@@ -197,7 +201,7 @@ class SWORD():
                             last_point = point_time
                             line_idx.append(k)
                     date_ticks = date_ticks[line_idx]
-                    ax1.vlines(x=line_idx, ymin=np.min(value), ymax=np.max(value), color='b', linestyle='--', alpha=.5)
+                    host.vlines(x=line_idx, ymin=np.min(value), ymax=np.max(value), color='b', linestyle='--', alpha=.5)
                 else:
                     coord_ticks_arange = np.arange(0, len(coord_ticks), int(len(coord_ticks) / 14))  # top xlabels tick
                     date_ticks = date_ticks[coord_ticks_arange]
@@ -205,9 +209,15 @@ class SWORD():
             else:
                 coord_ticks_arange = np.arange(0, len(coord_ticks))
 
-            if include[i] is not None:
-                ax1.plot(np.arange(len(include[i])), include[i], c='b', label='auroral')
+            right_axes = []
             if draw_station is not None:
+                right_axes.append(host.twinx)
+            if len(auroral_list) > 0:
+                right_axes.append(host.twinx)
+
+
+            if draw_station is not None:
+                ax3 = host.twinx()
                 ax3.set_ylabel("%s ground ground_station, nT" % draw_station)
                 ch_str = label.split(' ')[1]
                 channels = ['n', 'e', 'c']
@@ -222,26 +232,45 @@ class SWORD():
                         for chnl in [0, 1, 2]:     # n, e, c
                             obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=chnl, delta=delta, station=draw_station)
                             ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, channels[chnl]))
+                ax3.legend(loc=4)
+            # auroral oval
+            if len(auroral_list) > 0:
+                ax4 = host.twinx()
+                ax4.set_ylabel("OVATION auroral oval near %s, ergs/cm²" % label)
+                ax4.plot(np.arange(len(auroral_list[i])), auroral_list[i], c='b',
+                         label='auroral oval near ' + label)
+
+
+                if draw_station is not None:
+                    #new_fixed_axis = ax4.get_grid_helper().new_fixed_axis
+                    #ax4.axis["right"] = new_fixed_axis(loc="right", axes=ax4, offset=(60, 0))
+                    ax4.spines["right"].set_position(("axes", 1.1))
+                    ax4.yaxis.tick_right()
+                    ax4.yaxis.set_label_position("right")
+                    ax4.spines["right"].set_visible(True)
+                ax4.legend(loc=4)
+                ax4.grid(linestyle='--')
+
             if 'fac2' in label:
                 label += ' nA/m²'
             else:
                 label += ' nT'
-            ax1.annotate("MLat MLT\n\nLat Lon", xy=(-.05, 1.03), xycoords="axes fraction")
-            ax1.set_ylabel(label)
-            ax1.set_xticks(np.array(date_ticks[:, 0]).astype(int))
-            ax1.set_xticklabels(date_ticks[:, 1], rotation=40)
-
-            ax2.set_xlim(ax1.get_xlim())
+            host.set_ylabel(label)
+            host.set_xticks(np.array(date_ticks[:, 0]).astype(int))
+            host.set_xticklabels(date_ticks[:, 1], rotation=40)
+            ax2.set_xlim(host.get_xlim())
             ax2.set_xticks(coordtick_locations[coord_ticks_arange])
             ax2.set_xticklabels(coord_ticks[coord_ticks_arange])
+            ax2.tick_params(axis='x', labelsize=8)
+            ax2.annotate("MLat MLT\n\nLat Lon", xy=(-0.025, 1.037), xycoords=ax2.transAxes, size=8)
+
 
             #https://stackoverflow.com/questions/20532614/multiple-lines-of-x-tick-labels-in-matplotlib
 
-            ax1.grid()
-            ax1.xaxis.grid(False)
+            host.grid()
+            host.xaxis.grid(False)
             ax2.grid()
-            ax1.legend()
-            ax3.legend(loc=4)
+            host.legend()
         if draw_list[0][1][0] != draw_list[0][1][-1]:   # first date != second date
             dt_from, dt_to = decode_str_dt_param(draw_list[0][1][0] + 'T' + draw_list[0][2][0]), decode_str_dt_param(
                 draw_list[0][1][-1] + 'T' + draw_list[0][2][-1])
@@ -260,53 +289,12 @@ class SWORD():
 
         plt.grid(True)
 
-
-
-
-
-    def draw_swarm_scatter(self, points, values, custom_label=None, annotate=False):
-        """отрисовка """
-        # prepare colorbar, based on values
-        # 'n', 'e', 'c', fac2, mu, Dd
-
-        if custom_label in ['dBn', 'dBe', 'dBd']:
-            unit = 'SWARM ' + custom_label + 'nT'
-        elif custom_label == 'fac2':
-            unit = 'SWARM FAC2 nA/m²'
-        elif custom_label == 'mu':
-            unit = 'DMA anomaly lvl'
-        elif custom_label == "Dd":
-            unit = '|SWARM-Model| Dd nT'
-        else:
-            unit = 'no unit'
-        cmap = plt.get_cmap('seismic')
-
-        self.draw_colorbar(values=values, cmap=cmap, label=unit, vcenter=0.)
-
-
-        # draw scatter point, color based on values and legend
-        levels = MaxNLocator(nbins=10).tick_values(values.min(), values.max())
-        norm = BoundaryNorm(levels, cmap.N, clip=True)
-        s = np.power(len(values), -1/16) * 300
-        self.ax.scatter(points[:, 1], points[:, 0], s=s, c=values, cmap=cmap, norm=norm, transform=ccrs.PlateCarree(), edgecolors='k', lw=0.3)
-        #self.ax.scatter(points[:, 1], points[:, 0], c=values, cmap=cmap, norm=norm, transform=ccrs.PlateCarree())
-
-        #str_values = np.format_float_positional(values, precision=3)
-        str_values =[str('%.2f' % x) for x in values]
-        #self.ax.text(points[:, 1], points[:, 0], str_values, )
-        #self.ax.scatter(points[:, 1], points[:, 0])
-
-        if annotate:
-            for i, txt in enumerate(str_values):
-                # self.ax.annotate(txt, (points[i, 1], points[i, 0]), transform=ccrs.PlateCarree())
-                self.ax.text(points[i, 1], points[i, 0], txt, transform=ccrs.PlateCarree(), fontsize=8)
-
     def draw_swarm_path(self, points, points_time=None):
         x, y = points[:, 1], points[:, 0]
         self.ax.plot(x, y,'k--',zorder=1,lw=1,alpha=0.4,transform=ccrs.Geodetic())
         line_length = 1
-
-        if points_time is not None:
+        if points_time is not None and len(points_time) > 0:
+            print('draw vline')
             # decode from str to datetime format
             points_time = np.array(points_time, dtype='datetime64')
 
@@ -332,7 +320,7 @@ class SWORD():
                         line = Line2D([c1[0], x1, c2[0]],
                                       [c1[1], y1, c2[1]], transform=ccrs.Geodetic())
                         self.ax.add_line(line, )
-                        self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8,  transform=ccrs.Geodetic())
+                        self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8, clip_on=True,  transform=ccrs.Geodetic())
 
                     except Exception as e:
                         pass
@@ -372,6 +360,152 @@ class SWORD():
             except Exception as e:
                 pass"""
 
+    def draw_swarm_scatter(self, points, values, custom_label=None, annotate=False):
+        """отрисовка """
+        # prepare colorbar, based on values
+        # 'n', 'e', 'c', fac2, mu, Dd
+        cb_type = 'zero_center'
+        cmap = plt.get_cmap('seismic')
+        if custom_label in ['dBn', 'dBe', 'dBd']:
+            unit = 'SWARM ' + custom_label + ', nT'
+        elif custom_label == 'fac2':
+            unit = 'SWARM FAC2, nA/m²'
+        elif custom_label == 'mu':
+            unit = 'DMA anomaly lvl'
+            cb_type = 'DMA_anomaly'
+            cmap = plt.get_cmap('RdYlBu')
+        elif custom_label == "Dd":
+            unit = '|SWARM-Model| $\\mathrm{d} B$ (nT)'
+        else:
+            unit = 'no unit'
+
+
+        print('scatter max:%s scatter min:%s' % (np.max(values), np.min(values)), )
+
+
+        # draw scatter point, color based on values and legend
+        cmap_args = self.draw_colorbar(values=values, cmap=cmap, label=unit, cb_type=cb_type)
+
+        s = np.power(len(values), -1/16) * 300
+        self.ax.scatter(points[:, 1], points[:, 0], s=s, c=values, **cmap_args, transform=ccrs.PlateCarree(), edgecolors='k', lw=0.3)
+        #self.ax.scatter(points[:, 1], points[:, 0], c=values, cmap=cmap, norm=norm, transform=ccrs.PlateCarree())
+
+        #str_values = np.format_float_positional(values, precision=3)
+        str_values =[str('%.2f' % x) for x in values]
+        #self.ax.text(points[:, 1], points[:, 0], str_values, )
+        #self.ax.scatter(points[:, 1], points[:, 0])
+
+        if annotate:
+            for i, txt in enumerate(str_values):
+                # self.ax.annotate(txt, (points[i, 1], points[i, 0]), transform=ccrs.PlateCarree())
+                self.ax.text(points[i, 1], points[i, 0], txt, transform=ccrs.PlateCarree(), fontsize=8)
+
+
+    def draw_ionomodel(self, surf_data, type=['north','seismic']):
+        if type[1] =='sigh':
+            cmap = 'jet'
+            cb_type = 'zero_min'
+            grid_method = 'linear'
+        else:
+            cmap = 'PiYG'
+            cb_type = 'zero_center'
+            grid_method = 'nearest'
+
+
+        x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
+        # grid the data.
+        xi = np.linspace(x.min()-1, x.max()+1, 75)
+        yi = np.linspace(y.min(), y.max(), 75)
+        Vi = griddata((x, y), z, (xi[None, :], yi[:, None]), method=grid_method)  # create a uniform spaced grid
+        X, Y = np.meshgrid(xi, yi)
+        print('Vi max', np.max(z))
+        print('Vi min', np.min(z))
+
+        lin = np.max(np.abs(z)) + (np.max(np.abs(z)) / 10)
+
+        cmap_args = self.draw_colorbar(z, cmap, 'ionomodel ' + str(type[0]) + ' μА/m²', cb_type=cb_type)
+        self.ax.contourf(X, Y, Vi, **cmap_args, transform=ccrs.PlateCarree())
+
+    def draw_avroral_oval(self, surf_data, hemisphere='north'):
+        """x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
+        # grid the data.
+        xi = np.linspace(x.min()-1, x.max()+1, 200)
+        yi = np.linspace(y.min(), y.max(), 200)
+        Vi = griddata((x, y), z, (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
+        X, Y = np.meshgrid(xi, yi)
+
+        self.draw_colorbar(z, cmap='coolwarm', label='avroral egrs/cm2s')
+        self.ax.contourf(X, Y, Vi, transform=ccrs.PlateCarree(), cmap='coolwarm')"""
+
+
+        X, Y, flux_value = surf_data
+        flux_value[np.isnan(flux_value)] = 0
+        cmap_args = self.draw_colorbar(flux_value, cmap='jet', label='auroral %s ergs/cm²' % hemisphere, cb_type='zero_min')
+        #cmap_args = self.draw_colorbar(flux_value, cmap=aurora_cmap, label='auroral %s egrs/cm2s' % hemisphere, vmin=0.5, )
+        """if hemisphere == 'north':
+            rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=90)
+        else:
+            rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=90)"""
+            #rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=0)
+        rotated_pole = ccrs.PlateCarree()
+        self.ax.contourf(X, Y, flux_value, **cmap_args, transform=rotated_pole, alpha=0.85)
+
+
+    def draw_colorbar(self, values, cmap, label, cb_type='zero_center'):
+        print(label, cb_type, values.max(), values.min())
+        """
+
+         #iono
+        if np.abs(values.min()) > np.abs(values.max()):
+                vmin, vmax = -1 * np.abs(values.min()), np.abs(values.min())
+            else:
+                vmin, vmax = -1 * np.abs(values.max()), np.abs(values.max())
+            cm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+            #cm = plt.cm.ScalarMappable(cmap=cmap, )
+            #cmap_args = dict(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+            cmap_args = dict(cmap=cmap, vmin=vmin, vmax=vmax)
+            """
+
+        if cb_type == 'zero_center':
+            # scatter
+            #levels = MaxNLocator(nbins=10).tick_values(values.min(), values.max())
+            #norm = BoundaryNorm(levels, cmap.N, clip=True)
+
+            if np.abs(values.min()) > np.abs(values.max()):
+                vmin, vmax = -1 * np.abs(values.min()), np.abs(values.min())
+            else:
+                vmin, vmax = -1 * np.abs(values.max()), np.abs(values.max())
+            norm = plt.Normalize(vmin=vmin, vmax=vmax)
+            cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            #cm = plt.cm.ScalarMappable(cmap=cmap)
+            cmap_args = dict(cmap=cmap, norm=norm)
+        elif cb_type == 'DMA_anomaly':
+            bounds = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
+            norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+            cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            cmap_args = dict(cmap=cmap, norm=norm)
+        elif cb_type == 'zero_min':
+            cmap_edit = plt.get_cmap(cmap)
+            cmap_edit.set_under('white', alpha="0")
+            # cmap_edit.set_under((1, 1, 1, 0))
+            #cm = plt.cm.ScalarMappable(cmap=cmap_edit, norm=plt.Normalize(vmin=0.75, vmax=values.max()))
+            cm = plt.cm.ScalarMappable(cmap=cmap_edit, norm=plt.Normalize(vmin=0.25, vmax=np.max(values)))
+            #cmap_args = dict(cmap=cmap_edit, vmin=0.75, vmax=values.max())
+            cmap_args = dict(cmap=cmap_edit, vmin=0.25, vmax=np.max(values))
+
+
+
+        cm._A = []
+        if self.proj_type == 'miller':
+            rotation, orientation, pad, label_pad = 0, 'horizontal', 0.01, None
+        else:
+            rotation, orientation, pad, label_pad = 270, 'vertical', 0.015, -0.5
+        #   https://stackoverflow.com/questions/15908371/matplotlib-colorbars-and-its-text-labels
+        #cb = plt.colorbar(cm, ax=self.ax, shrink=0.4, orientation=orientation, fraction=0.1, pad=0.0025)
+        cb = plt.colorbar(cm, ax=self.ax, orientation=orientation, shrink=0.35, fraction=0.05, pad=pad)
+        cb.set_label(label, labelpad=label_pad, rotation=rotation)
+        return cmap_args
+
     def draw_mag_coord_lines(self, date, geomag_pole=False):
         mag_lat_lines, mag_lon_lines, annotate_points = get_mag_coordinate_system_lines(date, geomag_pole)
 
@@ -396,53 +530,9 @@ class SWORD():
     def draw_vector(self, sw_pos, B):
         X, Y = sw_pos[:, 1], sw_pos[:, 0]
         #B = sw_value[:, :2]
-        u = 5000
+        u = 500
         q = self.ax.quiver(X, Y, B[:, 0], B[:, 1], transform=ccrs.PlateCarree(), width=0.0008)
         self.ax.quiverkey(q, X=0.7, Y=0.99, U=u, labelpos='E', label='{N, E} vector length = %s' % u, transform=ccrs.PlateCarree())
-
-
-    def draw_ionomodel(self, surf_data, type=['north','seismic']):
-        x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
-        # grid the data.
-        xi = np.linspace(x.min()-1, x.max()+1, 200)
-        yi = np.linspace(y.min(), y.max(), 200)
-        Vi = griddata((x, y), z, (xi[None, :], yi[:, None]), method='linear')  # create a uniform spaced grid
-        X, Y = np.meshgrid(xi, yi)
-
-        lin = np.max(np.abs(z)) + (np.max(np.abs(z)) / 10)
-        if type[1] =='sigma':
-            cmap = 'cool'
-            bounds = np.linspace(-0.5, lin, 50)
-        else:
-            cmap = 'PiYG'
-            bounds = np.linspace(-1 * lin, lin, 80)
-
-        self.draw_colorbar(Vi, cmap, 'ionomodel ' + str(type[0]) + ' μА/m²')
-        self.ax.contourf(X, Y, Vi, transform=ccrs.PlateCarree(), cmap=cmap)
-
-    def draw_avroral_oval(self, surf_data, hemisphere='north'):
-        """x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
-        # grid the data.
-        xi = np.linspace(x.min()-1, x.max()+1, 200)
-        yi = np.linspace(y.min(), y.max(), 200)
-        Vi = griddata((x, y), z, (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
-        X, Y = np.meshgrid(xi, yi)
-
-        self.draw_colorbar(z, cmap='coolwarm', label='avroral egrs/cm2s')
-        self.ax.contourf(X, Y, Vi, transform=ccrs.PlateCarree(), cmap='coolwarm')"""
-
-
-        X, Y, flux_value = surf_data
-        cmap_args = self.draw_colorbar(flux_value, cmap='plasma', label='auroral %s ergs/cm²' % hemisphere, vmin=0.5, )
-        #cmap_args = self.draw_colorbar(flux_value, cmap=aurora_cmap, label='auroral %s egrs/cm2s' % hemisphere, vmin=0.5, )
-        """if hemisphere == 'north':
-            rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=90)
-        else:
-            rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=90)"""
-            #rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=0)
-        rotated_pole = ccrs.PlateCarree()
-        self.ax.contourf(X, Y, flux_value, **cmap_args, transform=rotated_pole, alpha=0.85)
-
 
     def draw_shapefile(self, shapefile):
         #inProj = Proj(init='laea', preserve_units=True)
@@ -472,34 +562,7 @@ class SWORD():
         self.ax.scatter(x, y, c='r', marker='*', transform=ccrs.PlateCarree())
         self.ax.text(x, y, annotate, transform=ccrs.PlateCarree(), fontsize=10)
 
-    def draw_colorbar(self, values, cmap, label, vcenter=None, vmin=None):
-        if vmin is not None:
-            cmap_edit = plt.get_cmap(cmap)
-            cmap_edit.set_under('white', alpha="0")
-            #cmap_edit.set_under((1, 1, 1, 0))
-            sm = plt.cm.ScalarMappable(cmap=cmap_edit, norm=plt.Normalize(vmin=vmin, vmax=values.max()))
-            cmap_args = dict(cmap=cmap_edit, vmin=vmin, vmax=values.max())
-        elif vcenter is not None:
-            if np.abs(values.min()) > np.abs(values.max()):
-                vmin, vmax = -1 * np.abs(values.min()), np.abs(values.min())
-            else:
-                vmin, vmax = -1 * np.abs(values.max()), np.abs(values.max())
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
-            cmap_args = None
-        else:
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=values.min(), vmax=values.max()))
-            cmap_args = dict(cmap=cmap, vmin=values.min(), vmax=values.max())
 
-
-        sm._A = []
-        if self.proj_type == 'miller':
-            rotation, orientation, l_pad = 0, 'horizontal', -40
-        else:
-            rotation, orientation, l_pad = 270, 'vertical', 0
-        #   https://stackoverflow.com/questions/15908371/matplotlib-colorbars-and-its-text-labels
-        cb = plt.colorbar(sm, ax=self.ax, shrink=0.4, orientation=orientation, fraction=0.046, pad=0.015)
-        cb.set_label(label, labelpad=l_pad, rotation=rotation)
-        return cmap_args
 
     def draw_polygon(self, poly):
         x, y = poly.exterior.xy
@@ -507,10 +570,16 @@ class SWORD():
 
     def set_axis_label(self, label, zoom_axis=False):
         print('axis label:   ', label)
-        if zoom_axis:
-            self.ax.set_title(label, fontsize=20, y=-0.075)
+        if len(label)>100:
+            fs = 12
         else:
-            self.ax.set_title(label, fontsize=20)
+            fs = 17
+        if zoom_axis:
+            #self.ax.set_title(label, fontsize=fs, y=-0.1)
+            #self.ax.set_title(label, fontsize=fs, pad=1)
+            self.fig.suptitle(label, fontsize=fs)
+        else:
+            self.ax.set_title(label, fontsize=fs)
 
     def fig_to_PIL_image(self, name='1'):
 

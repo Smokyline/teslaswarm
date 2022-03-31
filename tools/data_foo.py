@@ -65,6 +65,7 @@ def get_points_in_poly(swarm_pos, swarm_poly_loc, proj_type, shapely_convert_to_
     if proj_type == 'ortho_n' or proj_type == 'ortho_s':
         p_in_p, poly = points_in_poly(poly_points=swarm_poly_loc, swarm_pos=swarm_pos, shapely_convert=shapely_convert_to_poly)
     elif proj_type == 'miller':
+        # idk but work
         p_in_p1, poly = points_in_poly(poly_points=swarm_poly_loc, swarm_pos=swarm_pos, shapely_convert=shapely_convert_to_poly)
         p_in_p2, poly = points_in_poly(poly_points=swarm_poly_loc, swarm_pos=swarm_pos, shapely_convert=shapely_convert_to_poly)
         for i, point in enumerate(p_in_p2):
@@ -258,15 +259,15 @@ def swarm_egrf_vector_subtraction(swarm_pos, swarm_values_full, swarm_date):
                 b1, b2 = np.sqrt(n-x), np.sqrt(e-y)
 
                 """
-        d, i, h, x, y, z, f = igrf_value(lat=swarm_pos[idx, 0], lon=swarm_pos[idx, 1],  alt=swarm_pos[idx, 2], year=year)
+        d, i, h, x, y, z, f = igrf_value(lat=swarm_pos[idx, 0], lon=180.-swarm_pos[idx, 1],  alt=swarm_pos[idx, 2], year=year)
         #d, i, h, x, y, z, f = igrf_value(lat=switched_swarm_pos[idx, 0], lon=switched_swarm_pos[idx, 1], alt=switched_swarm_pos[idx, 2], year=year)
+        print('sw_n:%.2f sw_e:%.2f x:%.2f y:%.2f' % (n, e, x, y))
         dd, dx, dy = magfield_variation(n, e, x, y)
         B.append([dd, dx, dy])
         idx += 1
     return np.array(B)
 
 
-######################################################################################################
 def igrf_value(lat, lon, alt=0., year=2005.):
 
     FACT = 180. / np.pi
@@ -294,7 +295,7 @@ def igrf_value(lat, lon, alt=0., year=2005.):
          f     = total intensity (nT) if isv = 0, rubbish if isv = 1
          
         """
-    x, y, z, f = calculate.igrf12syn(year, 1, alt, lat, lon)
+    x, y, z, f = calculate.igrf12syn(year, 2, alt, lat, lon)
     d = FACT * np.arctan2(y, x)
     h = np.sqrt(x * x + y * y)
     i = FACT * np.arctan2(z, h)
@@ -322,7 +323,7 @@ def magfield_variation(n_swarm, e_swarm, x_igrf, y_igrf, ):
     dd = (FACT * (x * dy - y * dx)) / (h * h)
     return dd, dx, dy
 
-
+######################################################################################################
 
 """def calculate_magnetic_field_intensity(lon, lat, alt, year):
     #   https://pypi.org/project/pyIGRF/
@@ -554,16 +555,16 @@ def get_auroral_flux(dt, atype='diff', jtype='energy', hemishpere='N'):
         XS, YS = xyz_to_spher(desc_geo)
 
     if hemishpere == 'N':
-        xi = np.linspace(XN.min(), XN.max() + 1, 150)
-        yi = np.linspace(YN.min(), YN.max() + 1, 150)
-        value = griddata((XN, YN), fluxgridN.flatten(), (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
+        xi = np.linspace(XN.min(), XN.max() + 1, 125)
+        yi = np.linspace(YN.min(), YN.max() + 1, 125)
+        value = griddata((XN, YN), fluxgridN.flatten(), (xi[None, :], yi[:, None]), method='linear')  # create a uniform spaced grid
         XX, YY = np.meshgrid(xi, yi)
         x_2d, y_2d, value_2d = XN, YN, fluxgridN.flatten()
 
     else:
-        xi = np.linspace(XS.min(), XS.max() + 1, 150)
-        yi = np.linspace(YS.min(), YS.max() + 1, 150)
-        value = griddata((XS, YS), fluxgridS.flatten(), (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
+        xi = np.linspace(XS.min(), XS.max() + 1, 125)
+        yi = np.linspace(YS.min(), YS.max() + 1, 125)
+        value = griddata((XS, YS), fluxgridS.flatten(), (xi[None, :], yi[:, None]), method='linear')  # create a uniform spaced grid
         XX, YY = np.meshgrid(xi, yi)
         x_2d, y_2d, value_2d = XS, YS, fluxgridS.flatten()
 

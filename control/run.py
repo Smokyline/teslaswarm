@@ -17,9 +17,9 @@ cut_obs_swarm_value_bool = False
 sw_liter = 'A'
 sw_channel = 0
 from_date = '2017-09-18T02:05:00'
-to_date = '2017-09-18T02:15:00'
+to_date = '2017-09-19T02:15:00'
 auroral_date = '2017-9-18T02:35:00'
-delta = 30
+delta = 300
 
 auroral_date = decode_str_dt_param(auroral_date)
 from_date, to_date = decode_str_dt_param(from_date), decode_str_dt_param(to_date)
@@ -84,7 +84,7 @@ proj_extend_loc = [-100, -60, 50, 75]    #  [-x, +x, -y, +y]
                      #proj_type='ortho_n',
                      proj_type='miller',
                      #draw_vector_diff=True,
-                     #proj_extend_loc=proj_extend_loc,
+                     proj_extend_loc=proj_extend_loc,
                      #draw_auroral_n=auroral_date,
                     #draw_ionomodel_s=True,
 
@@ -111,16 +111,16 @@ im3 = projection_im(swarm_info=[swarm_set_B, from_date, to_date, sw_channel],
 
 #im4 = get_plot_im(swarm_sets=[swarm_set_A], labels=['swarm-A n', 'swarm-A e', 'swarm-A c' ], include=[None, None, None], channel=None, delta=delta, ground_station='T47')
 #im4 = get_plot_im(swarm_sets=[fac_set_A], labels=['swarm-A fac2', None, None ], include=[None, None, None], channel=None, delta=delta, ground_station='AAA')
-(status, im4) = get_plot_im(swarm_sets=[swarm_set_A], labels=['swarm-A n', None, None ], include=[None, None, None], channel=0, delta=delta, ground_station=None)
+#(status, im4) = get_plot_im(swarm_sets=[fac_set_A], labels=['swarm-A fac2', None, None ], include=[auroral_to_swarm_A, None, None], channel=None, delta=delta, ground_station=None, txt_out=True)
 
 #   fourths
 #out_image = stack_images(2000, im1, im2, im3, im4)
 #out_image.save(STATIC_OS_PATH + '/media/images/test_v8.png')
 
 #   single
-#out_image = single_image(im1)
-out_image = single_image(im4)
-filename = 'single_test_v16_test'
+out_image = single_image(im1)
+#out_image = single_image(im4)
+filename = 'single_test_v17_test'
 
 
 

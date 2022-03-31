@@ -304,7 +304,7 @@ def SuperMAGGetIndices(logon,start,extent,flagstring='',**kwargs):
   urlstr = sm_coreurl('indices.php',logon,start,extent)
   indices = sm_keycheck_indices(flagstring)
   urlstr += indices
-  
+  print(urlstr)
   # get the string array of JSON data     
   (status,data_list)=sm_GetUrl(urlstr,'json')
 

@@ -24,6 +24,7 @@ SECRET_KEY = 'v@2p7%@z)zns-n-c^1k)1(m*4wiue)gx4za%bvph$l%2d^tdr='
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+#DEBUG = False
 
 ALLOWED_HOSTS = ['aleph.gcras.ru', '127.0.0.1']
 print('django.settings ALLOWED_HOSTS', ALLOWED_HOSTS)
@@ -120,20 +121,22 @@ USE_TZ = True
 
 
 
+STATIC_ROOT = ""
 
 STATIC_URL = '/static/'
 #STATIC_URL = '/request/static/'
 
 STATIC_OS_PATH = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = ( os.path.join('static'), )
 print(STATIC_OS_PATH)
-#STATIC_OS_PATH = BASE_DIR + '/static'
-STATICFILES_DIRS = [
+"""STATICFILES_DIRS = [
     BASE_DIR + '/static',
-    BASE_DIR + "/templates/static",
-]
-print('django.settings STATICFILES_DIRS', STATICFILES_DIRS)
+    BASE_DIR + '/templates/static',
 
-CHAOS_PATH = os.path.join(BASE_DIR, 'chaos7_model\\data\\CHAOS-7.mat')
+]
+print('django.settings STATICFILES_DIRS', STATICFILES_DIRS)"""
+
+CHAOS_PATH = os.path.join(BASE_DIR, 'chaos7_model/data/CHAOS-7.mat')
 #CHAOS_PATH = os.path.join('C:\\Users\\ivan\\YandexDisk\\workspace\\py\\teslaswarm\\chaos7_model\\data\\CHAOS-7.mat')
 
 OBS_DATA_PATH = os.path.join(BASE_DIR, 'static/data/obs_data/SALU/')

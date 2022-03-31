@@ -4,7 +4,7 @@ from teslaswarm import settings
 from django.http import HttpResponse
 import os
 from tools.dt_foo import decode_str_dt_param
-from teslaswarm.settings import STATIC_OS_PATH, STATICFILES_DIRS
+from teslaswarm.settings import STATIC_OS_PATH
 from control.request_control import teslaswarmControl
 
 def get_image_page(request):
@@ -48,7 +48,7 @@ def get_image_page(request):
     param_dict = {}
     for p in param_name:
         param_dict[p] = request.GET[p]
-    print(param_dict)
+    #print(param_dict)
     """
     {'proj_type': 'miller', 'plot_liter': 'true:false:false:false', 'sw_liter': 'A', 'sw_delta': '300', 
     'from_date': '2017-09-07T00:00:00', 'to_date': '2017-09-09T00:00:00', 'sw_channel': '1', 'annotate_sw_value': 'true', 
@@ -91,7 +91,7 @@ def get_image_page(request):
         annotate_sw_value_bool = False
 
     if param_dict['proj_type'] != 'plot':
-        if param_dict['sw_liter'] == '|AC|':
+        if param_dict['sw_liter'] == 'AC':
             swarm_set_A = sm.get_swarm_set(sw_liter='A', fac2_mod=fac2_mod)
             swarm_set_C = sm.get_swarm_set(sw_liter='C', fac2_mod=fac2_mod)
             SWARM_SET = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
@@ -123,9 +123,8 @@ def get_image_page(request):
 
     if not ('undefined' in str(param_dict['proj_extend_loc'])):
         sm.set_proj_extend_loc(loc=sm.get_strParam2arrayParam(param_dict['proj_extend_loc']))
-    if not ('undefined' in str(param_dict['swarm_poly_loc'])):
+        #sm.set_swarm_cutpoly_loc(loc=sm.get_strParam2arrayParam(param_dict['swarm_poly_loc']))
 
-        sm.set_swarm_cutpoly_loc(loc=sm.get_strParam2arrayParam(param_dict['swarm_poly_loc']))
 
     # INTERMAGNET observatories
     if not ('undefined' in str(param_dict['obs_code'])):
@@ -182,14 +181,17 @@ def get_image_page(request):
                 elif i == 2:   # if A, B, C
                     swarm_set = sm.get_swarm_set(sw_liter='C', fac2_mod=fac2_mod)
                 elif i == 3:   # if |AC|
+                    print('AC')
                     swarm_set_A = sm.get_swarm_set(sw_liter='A', fac2_mod=fac2_mod)
                     swarm_set_C = sm.get_swarm_set(sw_liter='C', fac2_mod=fac2_mod)
                     swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
 
                 if param_dict['near_auroral_points'] == 'true':
-                    include_data.append(sm.get_near_auroral_points_to_swarm(swarm_set=swarm_set))
+                    #include_data.append(sm.get_near_auroral_points_to_swarm(swarm_set=swarm_set))
+                    get_auroral = True
                 else:
-                    include_data.append(None)
+                    get_auroral = False
+                    #include_data.append(None)
                 if fac2_mod:
                     labels.append('swarm-%s %s' % (swarm_set[0], 'fac2'))
                 else:
@@ -202,11 +204,15 @@ def get_image_page(request):
 
 
         print(bool_set, '=> plot sets:', len(swarm_sets), labels, 'include:', include_data, 'superMAG station:', station)
-        (status, message) = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, include=include_data, sw_channel=sw_channel, delta=delta, station=station)
+        (status, message) = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, auroral=get_auroral,
+                                                 sw_channel=sw_channel, delta=delta, station=station)
     else:
-        (status, message) = sm.get_projection_image(swarm_set=SWARM_SET, swarm_channel=sw_channel, proj_type=param_dict['proj_type'],
-                                  annotate_sw_value_bool=annotate_sw_value_bool)
+        (status, message) = sm.get_projection_image(swarm_set=SWARM_SET, swarm_channel=sw_channel,
+                                                    proj_type=param_dict['proj_type'], annotate_sw_value_bool=annotate_sw_value_bool)
     os.umask(original_umask)
+
+    if status == 0:
+        return render(request, 'error.html', {'ERROR_MESSAGE': message})
 
     id = message
     if sm.txt_out:
