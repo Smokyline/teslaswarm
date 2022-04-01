@@ -1,3 +1,5 @@
+import copy
+
 from django.core.mail import send_mail
 from django.shortcuts import render
 from teslaswarm import settings
@@ -6,6 +8,8 @@ import os
 from tools.dt_foo import decode_str_dt_param
 from teslaswarm.settings import STATIC_OS_PATH
 from control.request_control import teslaswarmControl
+
+TeslaSwarm = teslaswarmControl()
 
 def get_image_page(request):
     # main backend foo
@@ -61,7 +65,7 @@ def get_image_page(request):
 
 
     dt_from, dt_to = decode_str_dt_param(param_dict['from_date']), decode_str_dt_param(param_dict['to_date'])
-    sm = teslaswarmControl(from_date=dt_from, to_date=dt_to)
+    sm = copy.deepcopy(TeslaSwarm)
     id = sm.get_id()  # name as timestamp in ms
 
     fac2_mod = False
@@ -92,11 +96,11 @@ def get_image_page(request):
 
     if param_dict['proj_type'] != 'plot':
         if param_dict['sw_liter'] == 'AC':
-            swarm_set_A = sm.get_swarm_set(sw_liter='A', fac2_mod=fac2_mod)
-            swarm_set_C = sm.get_swarm_set(sw_liter='C', fac2_mod=fac2_mod)
+            swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
+            swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
             SWARM_SET = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
         else:
-            SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], fac2_mod=fac2_mod)
+            SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
 
     #   модель ионосферы
     if not ('undefined' in str(param_dict['iono_bz'])):
@@ -128,10 +132,10 @@ def get_image_page(request):
 
     # INTERMAGNET observatories
     if not ('undefined' in str(param_dict['obs_code'])):
-        sm.set_obs_codes(codes=param_dict['obs_code'], deg_radius=float(param_dict['deg_radius']), cut_obs_swarm_value=True)
+        sm.set_intermag_obs_codes(codes=param_dict['obs_code'], deg_radius=float(param_dict['deg_radius']))
 
     if not ('-' in str(param_dict['supermag_obs'])):
-        sm.set_supermag_obs_codes(codes=param_dict['supermag_obs'])
+        sm.set_supermag_obs_codes(codes=param_dict['supermag_obs'], deg_radius=float(param_dict['deg_radius']))
 
 
     # vector difference between swarm and IGRF-13 model
@@ -175,15 +179,15 @@ def get_image_page(request):
         for i, selected in enumerate(bool_set):
             if selected:
                 if i == 0:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='A', fac2_mod=fac2_mod)
+                    swarm_set = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
                 elif i == 1:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='B', fac2_mod=fac2_mod)
+                    swarm_set = sm.get_swarm_set(sw_liter='B', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
                 elif i == 2:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='C', fac2_mod=fac2_mod)
+                    swarm_set = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
                 elif i == 3:   # if |AC|
                     print('AC')
-                    swarm_set_A = sm.get_swarm_set(sw_liter='A', fac2_mod=fac2_mod)
-                    swarm_set_C = sm.get_swarm_set(sw_liter='C', fac2_mod=fac2_mod)
+                    swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
+                    swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
                     swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
 
                 if param_dict['near_auroral_points'] == 'true':

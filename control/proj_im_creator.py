@@ -7,8 +7,8 @@ from chaos7_model.chaos_model import CHAOS7
 def get_proj_image(swarm_info, proj_type,
                    ionomodel_param=None, draw_auroral_s=None,
                    draw_auroral_n=None, draw_shape=None, draw_vector_diff=False,
-                   intermag_observ_code=None, measure_mu=False, mag_grid_coord=False,
-                   cut_swarm_value_bool=False, cut_obs_swarm_value_bool=False, swarm_poly_loc=None, proj_extend_loc=None,
+                   observ_code_value=None, measure_mu=False, mag_grid_coord=False,
+                   cut_swarm_value_bool=False, swarm_poly_loc=None, proj_extend_loc=None,
                    annotate_sw_value_bool=False, cut_deg_radius=5, txt_out=False):
     swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values_nec = swarm_info[0]   # swarm_set
     from_date, to_date, swarm_channel = swarm_info[1], swarm_info[2], swarm_info[3]
@@ -23,10 +23,16 @@ def get_proj_image(swarm_info, proj_type,
     #   приближение до OBS области
     #   extend_loc = [-x, +x, -y, +y]
     #if cut_obs_swarm_value_bool == True and proj_type=='miller':
-    if cut_obs_swarm_value_bool == True and proj_type != 'plot':
-        obs_location = get_INTERMAGNET_observ_loc(intermag_observ_code)[:2]
+    #if cut_obs_swarm_value_bool == True and proj_type != 'plot':
+    if observ_code_value is not None and proj_type != 'plot':
+        obs_org, obs_code = observ_code_value.split('_')
+        if obs_org == 'intermag':
+            obs_location = get_INTERMAGNET_observ_loc(obs_code)[:2]
+        if obs_org == 'supermag':
+            obs_location = None
         proj_extend_loc = get_swarm_poly_loc(obs_location, deg_radius=cut_deg_radius)
         cut_swarm_value_bool = True
+
 
     #   установка границ проекции на основе координат области значений swarm
     if swarm_poly_loc is not None:
@@ -90,16 +96,8 @@ def get_proj_image(swarm_info, proj_type,
         sword.draw_shapefile(get_shapefile())
         ax_label += ' shapefile '
 
-
     if mag_grid_coord:
         sword.draw_mag_coord_lines(swarm_date[0], geomag_pole=True)    # True to_coord='MAG' /  False to_coord='GSM'
-
-
-    #   отрисовка на проеции местоположения обсерваторий INTERMAGNET
-    if intermag_observ_code is not None:
-        obs_location = get_INTERMAGNET_observ_loc(intermag_observ_code)  # lon, lat, code
-        sword.draw_point_with_annotate(obs_location)
-        lon, lat = obs_location[:2]
 
     #   выбор канала n, e, c
     if FAC2:
@@ -135,10 +133,13 @@ def get_proj_image(swarm_info, proj_type,
             poly_loc = [[proj_extend_loc[1],proj_extend_loc[2],], [proj_extend_loc[1],proj_extend_loc[3],],
                         [proj_extend_loc[0],proj_extend_loc[3],], [proj_extend_loc[0],proj_extend_loc[2],]]
             p_in_p, poly = get_points_in_poly(swarm_pos[:, :2], poly_loc, proj_type)
-        elif intermag_observ_code is not None:
+        elif observ_code_value is not None:
+
             print('cut swarm_pos near obs')
             #p_in_p, poly = get_swarm_value_near_obs(swarm_pos, intermag_observ_code, proj_type)
-            p_in_p = get_position_near_point(swarm_pos[:, :2], intermag_observ_code, degr_radius=cut_deg_radius)
+            p_in_p = get_position_near_point(swarm_pos[:, :2], obs_location, degr_radius=cut_deg_radius)
+            sword.draw_point_with_annotate(obs_location, annotate=obs_code)
+
         #print(len(swarm_pos))
         #print(len(p_in_p))
         #print(p_in_p)

@@ -14,11 +14,11 @@ from teslaswarm.settings import STATIC_OS_PATH
 
 
 class teslaswarmControl():
-    def __init__(self, from_date, to_date):
+    def __init__(self):
         # swarm
 
-        self.from_date = from_date    # <class 'datetime.datetime'> 2017-09-03 00:00:59
-        self.to_date = to_date
+        #self.from_date = from_date    # <class 'datetime.datetime'> 2017-09-03 00:00:59
+        #self.to_date = to_date
 
         self.ionomodel_param = None
 
@@ -28,8 +28,7 @@ class teslaswarmControl():
 
         self.proj_extend_loc = None     # [-lon, +lon, -lat, +lat]
         self.swarm_poly_loc = None      # [[-90, 50], [-90, 90], [25, 90], [25,50], [-90, 50]]
-        self.intermag_observ_code = None    # ['SFS']
-        self.supermag_observ_code = None    # ['SFS']
+        self.observ_code = None    # ['SFS']
 
         self.swarm_value_delta = 300
         self.deg_radius = 5
@@ -111,14 +110,13 @@ class teslaswarmControl():
     def set_swarm_cutpoly_loc(self, loc=None):
         self.swarm_poly_loc = loc
 
-    def set_obs_codes(self, codes=None, deg_radius=5, cut_obs_swarm_value=False):
-        self.intermag_observ_code = codes
+    def set_intermag_obs_codes(self, codes=None, deg_radius=5):
+        self.observ_code = 'intermag_'+codes
         self.deg_radius = deg_radius
-        self.cut_obs_swarm_value_bool = cut_obs_swarm_value
 
-    def set_supermag_obs_codes(self, codes=None):
-        self.supermag_observ_code = codes
-        #TODO im creator
+    def set_supermag_obs_codes(self, codes=None, deg_radius=5):
+        self.observ_code = 'supermag_'+codes
+        self.deg_radius = deg_radius
 
     def set_swarm_igrf_vectorDiff(self, b=False):
         self.draw_vector_diff = b
@@ -130,15 +128,14 @@ class teslaswarmControl():
         self.mag_grid_coord = b
 
     def set_shape_file(self, file):
-        # TODO import file
         self.draw_shape = file
 
     def set_txt_out(self, b=False):
         self.txt_out = b
 
-    def get_swarm_set(self, sw_liter='A', fac2_mod=False):
+    def get_swarm_set(self, sw_liter='A', from_date=None, to_date=None, fac2_mod=False):
         #   получение датасета данных SWARM_X
-        return get_swarm_set(sw_liter, self.from_date, self.to_date, self.swarm_value_delta, fac2_mod)
+        return get_swarm_set(sw_liter, from_date, to_date, self.swarm_value_delta, fac2_mod)
 
     def get_swarmAC_diff(self, swarm_set_A, swarm_set_C, sw_channel):
         #   получение датасета данных разности значений поля между SWARM_A и SWARM_C
@@ -175,12 +172,12 @@ class teslaswarmControl():
         swarm_info = [swarm_set, self.from_date, self.to_date, swarm_channel]
 
         (status, out) = get_proj_image(swarm_info=swarm_info, proj_type=proj_type,
-                             ionomodel_param=self.ionomodel_param, draw_auroral_s=self.draw_auroral_s,
-                             draw_auroral_n=self.draw_auroral_n, draw_shape=self.draw_shape, draw_vector_diff=self.draw_vector_diff,
-                             intermag_observ_code=self.intermag_observ_code, measure_mu=self.measure_mu, mag_grid_coord=self.mag_grid_coord,
-                             cut_swarm_value_bool=self.cut_swarm_value_bool, cut_obs_swarm_value_bool=self.cut_obs_swarm_value_bool,
-                             swarm_poly_loc=self.swarm_poly_loc, proj_extend_loc=self.proj_extend_loc,
-                             annotate_sw_value_bool=annotate_sw_value_bool, cut_deg_radius=self.deg_radius, txt_out=self.txt_out)
+                                       ionomodel_param=self.ionomodel_param, draw_auroral_s=self.draw_auroral_s,
+                                       draw_auroral_n=self.draw_auroral_n, draw_shape=self.draw_shape, draw_vector_diff=self.draw_vector_diff,
+                                       observ_code_value=self.observ_code, measure_mu=self.measure_mu, mag_grid_coord=self.mag_grid_coord,
+                                       cut_swarm_value_bool=self.cut_swarm_value_bool,
+                                       swarm_poly_loc=self.swarm_poly_loc, proj_extend_loc=self.proj_extend_loc,
+                                       annotate_sw_value_bool=annotate_sw_value_bool, cut_deg_radius=self.deg_radius, txt_out=self.txt_out)
         if status == 1 and self.txt_out:
             message = out
         if status == 1 and self.txt_out == False:

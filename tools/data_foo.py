@@ -93,10 +93,8 @@ def get_swarm_value_near_obs(swarm_pos, code, proj_type):
     return p_in_p  # bool array
 
 
-def get_position_near_point(swarm_pos, code, degr_radius):
+def get_position_near_point(swarm_pos, obs_location, degr_radius):
     km = 111.134861111
-    obs_location = get_INTERMAGNET_observ_loc(code)[:2]
-
     eucl = eucl_distance(obs_location, swarm_pos)
     near_swarm_pos = np.full(len(swarm_pos), False)
     near_swarm_pos[np.where(eucl < degr_radius)] = True

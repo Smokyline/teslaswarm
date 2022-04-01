@@ -579,10 +579,10 @@ class SWORD():
                 self.ax.plot(x, y, transform=lccproj, zorder=1)
 
 
-    def draw_point_with_annotate(self, point):
+    def draw_point_with_annotate(self, pos, annotate):
         #   for intermag observ for example
         #for point in points:
-        x, y, annotate = float(point[0]), float(point[1]), str(point[2])
+        x, y = float(pos[0]), float(pos[1])
         self.ax.scatter(x, y, c='r', marker='*', transform=ccrs.PlateCarree())
         self.ax.text(x, y, annotate, transform=ccrs.PlateCarree(), fontsize=10)
 
