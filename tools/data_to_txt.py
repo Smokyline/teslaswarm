@@ -75,7 +75,12 @@ class Data2Text():
                     if c != 2:
                         self.columns_legend[legend_key].append(self.field_legend[c])
                     else:
-                        self.columns_legend[legend_key].append('uA/m^2')
+                        if 'sigh' in k:
+                            self.columns_legend[legend_key].append('Sm')
+                        elif 'pot' in k:
+                            self.columns_legend[legend_key].append('kV')
+                        else:
+                            self.columns_legend[legend_key].append('uA/m^2')
                 if 'auroral' in k:
                     #print(k, array)
                     legend_key = 'auroral_oval_%s' % self.auroral_shp

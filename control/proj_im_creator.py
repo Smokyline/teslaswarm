@@ -64,7 +64,8 @@ def get_proj_image(swarm_info, proj_type,
         elif ionomodel_param['hem'] == 's':
             sword.draw_ionomodel(fac_surf, type=['southern', ionomodel_param['type']])
             d2txt.ionomodel_shp = 's'
-        d2txt.append(fac_surf, name='ionomodel'+str(ionomodel_param['hem']).upper())
+        d2txt.append(np.array([fac_surf[:,1], fac_surf[:,0], fac_surf[:,2]]).T,
+                     name='ionomodel'+str(ionomodel_param['hem']).upper()+'_'+ionomodel_param['type'])
         ax_label += ' iono' + str(ionomodel_param)
 
 
@@ -240,7 +241,7 @@ def get_proj_image(swarm_info, proj_type,
     return (STATUS, out)
 
 
-def get_plot_im(swarm_sets, labels, auroral, channel, delta, ground_station=None, txt_out=False):
+def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_station=None, txt_out=False):
     #swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values = swarm_info[0]
     #from_date, to_date = swarm_info[1], swarm_info[2]
     # инициация рендера
@@ -266,6 +267,8 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, ground_station=None
                 value = np.array(swarm_set[4])[:, channel]
             except:
                 value = swarm_set[4]
+            if measure_mu:
+                value = get_measure_mu(value)
             label = labels[i]
             draw_list.append([label, date_list, time_list, value, position_list])
             d2txt.SWARM_liter = label.rsplit('-')[1][0]
@@ -276,6 +279,8 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, ground_station=None
         if channel is None:
             if shape_size == 1:
                 value = swarm_set[4]
+                if measure_mu:
+                    value = get_measure_mu(value)
                 label = labels[i]
                 draw_list.append([label, date_list, time_list, value, position_list])
                 d2txt.SWARM_liter = label.rsplit('-')[1][0]
@@ -286,6 +291,8 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, ground_station=None
                 for ch in range(3):
                     label = labels[ch]
                     value = np.array(swarm_set[4])[:, ch]
+                    if measure_mu:
+                        value = get_measure_mu(value)
                     draw_list.append([label, date_list, time_list, value, position_list])
                     d2txt.SWARM_liter = label.rsplit('-')[1][0]
                     d2txt.SWARM_channel = str(channel)

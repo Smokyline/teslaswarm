@@ -196,7 +196,7 @@ class teslaswarmControl():
         swarm_sets=[fac_set_A, fac_set_B, C]
         swarm_sets=[fac_set_A, fac_set_B]
         """
-        (status, out) = get_plot_im(swarm_sets, labels, auroral, sw_channel, delta, station, self.txt_out)
+        (status, out) = get_plot_im(swarm_sets, labels, auroral, sw_channel, delta, self.measure_mu, station, self.txt_out)
 
         if status == 1 and self.txt_out:
             message = out

@@ -111,11 +111,12 @@ class SWORD():
 
         # увеличение конкретной области
         if extend is not None:
+            self.extend = extend
             self.ax.set_extent(extend, ccrs.PlateCarree())
 
         else:
             """no projection"""
-            pass
+            self.extend = None
 
         #plt.gca().set_axis_off()
         plt.subplots_adjust(top=1, bottom=0.025, right=1, left=0.025,
@@ -320,7 +321,14 @@ class SWORD():
                         line = Line2D([c1[0], x1, c2[0]],
                                       [c1[1], y1, c2[1]], transform=ccrs.Geodetic())
                         self.ax.add_line(line, )
-                        self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8, clip_on=True,  transform=ccrs.Geodetic())
+                        if self.extend is not None:
+                            if self.extend[0] < c1[0] < self.extend[1] and self.extend[2] < c1[1] < self.extend[3]:
+                                self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8, clip_on=True,
+                                             transform=ccrs.Geodetic())
+                        else:
+                            self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8, clip_on=True,  transform=ccrs.Geodetic())
+
+
 
                     except Exception as e:
                         pass
@@ -346,8 +354,18 @@ class SWORD():
 
                         c1 = p1 + l2
                         c2 = p1 + l3
+                        line = Line2D([c1[0], x1, c2[0]],
+                                      [c1[1], y1, c2[1]], transform=ccrs.Geodetic())
+                        self.ax.add_line(line, )
 
-                        self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8,  transform=ccrs.Geodetic())
+                        if self.extend is not None:
+                            if self.extend[0] < c1[0] < self.extend[1] and self.extend[2] < c1[1] < self.extend[3]:
+                                self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8,
+                                             transform=ccrs.Geodetic())
+                        else:
+                            self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8,
+                                         transform=ccrs.Geodetic())
+
                     except Exception as e:
                         pass
                     last_annotate_point = point_time
@@ -398,20 +416,26 @@ class SWORD():
         if annotate:
             for i, txt in enumerate(str_values):
                 # self.ax.annotate(txt, (points[i, 1], points[i, 0]), transform=ccrs.PlateCarree())
-                self.ax.text(points[i, 1], points[i, 0], txt, transform=ccrs.PlateCarree(), fontsize=8)
-
+                if self.extend is not None:
+                    if self.extend[0] < points[i, 1] < self.extend[1] and self.extend[2] < points[i, 0] < self.extend[3]:
+                        self.ax.text(points[i, 1], points[i, 0], txt, transform=ccrs.PlateCarree(), fontsize=8)
+                else:
+                    self.ax.text(points[i, 1], points[i, 0], txt, transform=ccrs.PlateCarree(), fontsize=8)
 
     def draw_ionomodel(self, surf_data, type=['north','seismic']):
         if type[1] =='sigh':
             cmap = 'jet'
             cb_type = 'zero_min'
             grid_method = 'linear'
+            unit = ' Sm'
         else:
             cmap = 'PiYG'
             cb_type = 'zero_center'
             grid_method = 'nearest'
-
-
+            if type[1] == 'pot':
+                unit = ' kV'
+            else:
+                unit = ' μА/m²'
         x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
         # grid the data.
         xi = np.linspace(x.min()-1, x.max()+1, 75)
@@ -423,7 +447,7 @@ class SWORD():
 
         lin = np.max(np.abs(z)) + (np.max(np.abs(z)) / 10)
 
-        cmap_args = self.draw_colorbar(z, cmap, 'ionomodel ' + str(type[0]) + ' μА/m²', cb_type=cb_type)
+        cmap_args = self.draw_colorbar(z, cmap, 'ionomodel ' + str(type[0]) + unit, cb_type=cb_type)
         self.ax.contourf(X, Y, Vi, **cmap_args, transform=ccrs.PlateCarree())
 
     def draw_avroral_oval(self, surf_data, hemisphere='north'):
