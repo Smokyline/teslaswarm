@@ -24,33 +24,7 @@ class CHAOS7():
         time_mjd_ad = np.array(t.value).astype(float) - 51544
         return time_mjd_ad
 
-    def datetime_to_epoch(self, dt):
-        """
-        Converts a Python datetime to a CDF Epoch value
 
-        Parameters
-        ==========
-        dt : :class:`datetime.datetime`
-            date and time to convert
-
-        Returns
-        =======
-        out : float
-            epoch corresponding to dt
-
-        See Also
-        ========
-        v_datetime_to_epoch
-        """
-        if dt.tzinfo != None and dt.utcoffset() != None:
-            dt = dt - dt.utcoffset()
-        dt.replace(tzinfo=None)
-        micro = dt.microsecond % 1000
-        if micro >= 500 and dt.year < 9999:
-            dt += datetime.timedelta(0, 0, 1000)
-        return self._library.computeEPOCH(dt.year, dt.month, dt.day, dt.hour,
-                                          dt.minute, dt.second,
-                                          int(dt.microsecond / 1000))
     def magfield_variation(self, n_swarm, e_swarm, x_chaos, y_chaos, ):
         """
              n same as x
@@ -91,9 +65,9 @@ class CHAOS7():
         theta = 90. - swarm_pos[:, 0]  # colat deg
         phi = swarm_pos[:, 1]  # deg
         radius = swarm_pos[:, 2]  # radius in km
-        print(theta[:10])
-        print(phi[:10])
-        print(radius[:10])
+        #print(theta[:10])
+        #print(phi[:10])
+        #print(radius[:10])
         sw_dt = np.array([decode_str_dt_param(a+'T'+b) for a, b in zip(swarm_date, swarm_time)])    # datetime format
         time = self.cdf.v_datetime_to_epoch(sw_dt)  # CDF epoch format
         time = time / (1e3 * 3600 * 24) - 730485    # time in modified Julian date 2000

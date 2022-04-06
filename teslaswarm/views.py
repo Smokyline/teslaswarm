@@ -41,8 +41,10 @@ def get_image_page(request):
         'swarm_poly_loc',   # str [[]]
         'cut_obs_swarm_value',     # bool
         'obs_code',     # str []
+        'supermag_obs',     # str []
         'deg_radius',   # float
         'igrf_vector_diff',  # bool
+        'igrf_vector_diffChaos',  # bool
         'measure_mu',   # bool
         'mag_grid',   # bool
         #'shape',        # file
@@ -131,19 +133,20 @@ def get_image_page(request):
 
 
     # INTERMAGNET observatories
-    if not ('undefined' in str(param_dict['obs_code'])):
+    if not ('-' in str(param_dict['obs_code'])):
         sm.set_intermag_obs_codes(codes=param_dict['obs_code'], deg_radius=float(param_dict['deg_radius']))
 
+    # superMAG stations
     if not ('-' in str(param_dict['supermag_obs'])):
         sm.set_supermag_obs_codes(codes=param_dict['supermag_obs'], deg_radius=float(param_dict['deg_radius']))
 
 
     # vector difference between swarm and IGRF-13 model
     if param_dict['igrf_vector_diff'] == 'true':
-        igrf_vector_diff = True
-    else:
-        igrf_vector_diff = False
-    sm.set_swarm_igrf_vectorDiff(b=igrf_vector_diff)
+        sm.set_swarm_igrf_vectorDiff(b=True)
+    elif param_dict['igrf_vector_diffChaos'] == 'true':
+        sm.set_swarm_chaos_vectorDiff(b=True)
+
 
     # convert swarm value to DMA anomaly measure mu
     if param_dict['measure_mu'] == 'true':
@@ -211,7 +214,7 @@ def get_image_page(request):
         (status, message) = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, auroral=get_auroral,
                                                  sw_channel=sw_channel, delta=delta, station=station)
     else:
-        (status, message) = sm.get_projection_image(swarm_set=SWARM_SET, swarm_channel=sw_channel,
+        (status, message) = sm.get_projection_image(swarm_set=SWARM_SET, from_date=dt_from, to_date=dt_to, swarm_channel=sw_channel,
                                                     proj_type=param_dict['proj_type'], annotate_sw_value_bool=annotate_sw_value_bool)
     os.umask(original_umask)
 

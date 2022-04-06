@@ -392,8 +392,11 @@ class SWORD():
             unit = 'DMA anomaly lvl'
             cb_type = 'DMA_anomaly'
             cmap = plt.get_cmap('RdYlBu')
-        elif custom_label == "Dd":
-            unit = '|SWARM-Model| $\\mathrm{d} B$ (nT)'
+        elif "Dd" in custom_label:
+            if 'IGRF' in custom_label:
+                unit = '|SWARM-IGRF| $\\mathrm{d} B$ (nT)'
+            if 'CHAOS7' in custom_label:
+                unit = '|SWARM-CHAOS7| $\\mathrm{d} B$ (nT)'
         else:
             unit = 'no unit'
 
@@ -583,7 +586,7 @@ class SWORD():
         #   for intermag observ for example
         #for point in points:
         x, y = float(pos[0]), float(pos[1])
-        self.ax.scatter(x, y, c='r', marker='*', transform=ccrs.PlateCarree())
+        self.ax.scatter(x, y, c='r', marker='*', s=100, transform=ccrs.PlateCarree())
         self.ax.text(x, y, annotate, transform=ccrs.PlateCarree(), fontsize=10)
 
 

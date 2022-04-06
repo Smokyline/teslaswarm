@@ -34,7 +34,8 @@ class teslaswarmControl():
         self.deg_radius = 5
         self.cut_swarm_value_bool = False
         self.cut_obs_swarm_value_bool = False
-        self.draw_vector_diff = False
+        self.draw_IGRFvector_diff = False
+        self.draw_CHAOSvector_diff = False
         self.measure_mu = False
         self.mag_grid_coord = False
         self.draw_shape = False
@@ -119,7 +120,10 @@ class teslaswarmControl():
         self.deg_radius = deg_radius
 
     def set_swarm_igrf_vectorDiff(self, b=False):
-        self.draw_vector_diff = b
+        self.draw_IGRFvector_diff = b
+
+    def set_swarm_chaos_vectorDiff(self, b=False):
+        self.draw_CHAOSvector_diff = b
 
     def set_measure_mu(self, b=False):
         self.measure_mu = b
@@ -160,7 +164,7 @@ class teslaswarmControl():
         return np.array(floatlist)
 
 
-    def get_projection_image(self, swarm_set, swarm_channel, proj_type, annotate_sw_value_bool):
+    def get_projection_image(self, swarm_set, from_date, to_date, swarm_channel, proj_type, annotate_sw_value_bool):
         """
         (swarm_info, proj_type,
         draw_ionomodel_n=False, draw_ionomodel_s=False, draw_auroral_s=None,
@@ -169,11 +173,12 @@ class teslaswarmControl():
         cut_swarm_value_bool=False, swarm_poly_loc=None, proj_extend_loc=None, annotate_sw_value_bool=False, convert_coord=None, cut_deg_radius=5):
 
         """
-        swarm_info = [swarm_set, self.from_date, self.to_date, swarm_channel]
+        swarm_info = [swarm_set, from_date, to_date, swarm_channel]
 
         (status, out) = get_proj_image(swarm_info=swarm_info, proj_type=proj_type,
                                        ionomodel_param=self.ionomodel_param, draw_auroral_s=self.draw_auroral_s,
-                                       draw_auroral_n=self.draw_auroral_n, draw_shape=self.draw_shape, draw_vector_diff=self.draw_vector_diff,
+                                       draw_auroral_n=self.draw_auroral_n, draw_shape=self.draw_shape,
+                                       draw_IGRFvector_diff=self.draw_IGRFvector_diff, draw_CHAOSvector_diff=self.draw_CHAOSvector_diff,
                                        observ_code_value=self.observ_code, measure_mu=self.measure_mu, mag_grid_coord=self.mag_grid_coord,
                                        cut_swarm_value_bool=self.cut_swarm_value_bool,
                                        swarm_poly_loc=self.swarm_poly_loc, proj_extend_loc=self.proj_extend_loc,

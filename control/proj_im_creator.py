@@ -6,7 +6,7 @@ from chaos7_model.chaos_model import CHAOS7
 
 def get_proj_image(swarm_info, proj_type,
                    ionomodel_param=None, draw_auroral_s=None,
-                   draw_auroral_n=None, draw_shape=None, draw_vector_diff=False,
+                   draw_auroral_n=None, draw_shape=None, draw_IGRFvector_diff=False, draw_CHAOSvector_diff=False,
                    observ_code_value=None, measure_mu=False, mag_grid_coord=False,
                    cut_swarm_value_bool=False, swarm_poly_loc=None, proj_extend_loc=None,
                    annotate_sw_value_bool=False, cut_deg_radius=5, txt_out=False):
@@ -133,7 +133,7 @@ def get_proj_image(swarm_info, proj_type,
             poly_loc = [[proj_extend_loc[1],proj_extend_loc[2],], [proj_extend_loc[1],proj_extend_loc[3],],
                         [proj_extend_loc[0],proj_extend_loc[3],], [proj_extend_loc[0],proj_extend_loc[2],]]
             p_in_p, poly = get_points_in_poly(swarm_pos[:, :2], poly_loc, proj_type)
-        elif observ_code_value is not None:
+        if observ_code_value is not None:
 
             print('cut swarm_pos near obs')
             #p_in_p, poly = get_swarm_value_near_obs(swarm_pos, intermag_observ_code, proj_type)
@@ -178,22 +178,25 @@ def get_proj_image(swarm_info, proj_type,
     sword.draw_swarm_path(swarm_pos[:, :2], points_time=vline_dt)
 
     # отрисовка вектора (X, Y, n, e) или (X, Y, |n-x|, |e-y|)
-    if draw_vector_diff:
+    if draw_IGRFvector_diff or draw_CHAOSvector_diff:
         #vector_components = swarm_values_nec[:, :2]   # n,e component
         vector_components = swarm_values_full_in_poly[:, :2]   # n,e component
         chaosm = CHAOS7(swarm_set=[swarm_liter, swarm_pos_in_poly, swarm_date_in_poly, swarm_time_in_poly, vector_components])
-        vector_subtraction = chaosm.get_swarm_chaos_vector_subtraction()
-        #vector_subtraction = swarm_egrf_vector_subtraction(swarm_pos_in_poly, vector_components, swarm_date_in_poly)
+        if draw_IGRFvector_diff:
+            vector_subtraction = swarm_egrf_vector_subtraction(swarm_pos_in_poly, vector_components, swarm_date_in_poly)
+            model_name = 'IGRF'
+        elif draw_CHAOSvector_diff:
+            vector_subtraction = chaosm.get_swarm_chaos_vector_subtraction()
+            model_name = 'CHAOS7'
 
         swarm_values_in_poly = vector_subtraction[:, 0]     # dd
         vector_components = vector_subtraction[:, (1, 2)]   # dx, dy
-        legend_label = 'Dd'
 
         # convert to geomagnetic coords
         #swarm_pos_in_poly = geo2mag(swarm_pos_in_poly, swarm_date_in_poly)
-
-        d2txt.append(swarm_values_in_poly, name='SWARM_CHAOS7')
-        ax_label += '|SWARM-CHAOS7|'
+        legend_label = model_name + '_Dd'
+        d2txt.append(swarm_values_in_poly, name='SWARM_%s'%model_name)
+        ax_label += '|SWARM-%s|'%model_name
     elif measure_mu:
         swarm_values_in_poly = get_measure_mu(swarm_values_in_poly)
         ax_label += ' measure_mu '
@@ -218,7 +221,7 @@ def get_proj_image(swarm_info, proj_type,
 
         sword.draw_swarm_scatter(swarm_pos_in_poly[:, :2], swarm_values_in_poly, custom_label=legend_label,
                                  annotate=annotate_sw_value_bool)  # отрисовка значение точек на орбите
-        if draw_vector_diff:
+        if draw_CHAOSvector_diff or draw_IGRFvector_diff:
             sword.draw_vector(swarm_pos_in_poly, B=vector_components)
 
     # конвертация figure matplotlib в PIL image для stacker.py

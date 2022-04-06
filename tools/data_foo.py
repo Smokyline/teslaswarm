@@ -78,7 +78,7 @@ def get_points_in_poly(swarm_pos, swarm_poly_loc, proj_type, shapely_convert_to_
 def get_poly_around_point(xy, n_points, radius):
     print('create poly around point...')
     p = shapely.geometry.Point([xy[0], xy[1]])
-    print(p)
+    #print(p)
     d = radius * 1000  # meters
     angles = np.linspace(0, 360, n_points)
     polygon = geog.propagate(p, angles, d)
@@ -259,7 +259,7 @@ def swarm_egrf_vector_subtraction(swarm_pos, swarm_values_full, swarm_date):
                 """
         d, i, h, x, y, z, f = igrf_value(lat=swarm_pos[idx, 0], lon=180.-swarm_pos[idx, 1],  alt=swarm_pos[idx, 2], year=year)
         #d, i, h, x, y, z, f = igrf_value(lat=switched_swarm_pos[idx, 0], lon=switched_swarm_pos[idx, 1], alt=switched_swarm_pos[idx, 2], year=year)
-        print('sw_n:%.2f sw_e:%.2f x:%.2f y:%.2f' % (n, e, x, y))
+        #print('sw_n:%.2f sw_e:%.2f x:%.2f y:%.2f' % (n, e, x, y))
         dd, dx, dy = magfield_variation(n, e, x, y)
         B.append([dd, dx, dy])
         idx += 1

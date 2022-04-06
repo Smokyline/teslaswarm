@@ -55,7 +55,12 @@ class Data2Text():
                         self.columns_legend[legend_key].append(self.SWARM_channel + ',nT')
                     else:
                         self.columns_legend[legend_key].append('FAC2,nA/m^2')
-                if k == 'SWARM_IGRF':
+                if k == 'SWARM_IGRF' :
+                    legend_key = 'SWARM-%s_IGRF_diff' % self.SWARM_liter
+                    if c == 0:
+                        self.columns_legend[legend_key] = []
+                    self.columns_legend[legend_key].append('dB,nT')
+                if k == 'SWARM_CHAOS7':
                     legend_key = 'SWARM-%s_CHAOS7_diff' % self.SWARM_liter
                     if c == 0:
                         self.columns_legend[legend_key] = []
