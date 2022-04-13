@@ -13,19 +13,21 @@ def test_lib_load():
         import matplotlib
         import django
         import pymysql
+        import cartopy  # request Proj 8.0.0 https://stackoverflow.com/questions/53697814/using-pip-install-to-install-cartopy-but-missing-proj-version-at-least-4-9-0
         import pyproj
         import astropy
         import chaosmagpy
         import shapely
-        import cartopy  # request Proj 8.0.0
         import geog     # pip
         import geospacepy   # pip below
         import spacepy  # conda install networkx h5py   pip install ffnet
         import aacgmv2
-
+        import pyproj
+        import astropy
+        import chaosmagpy
         import ovationpyme  # https://github.com/lkilcommons/OvationPyme https://github.com/lkilcommons/nasaomnireader   #https://spdf.gsfc.nasa.gov/pub/software/cdf/dist/cdf38_0/
-        import pyIGRF   # https://pypi.org/project/pyIGRF/#description
-
+        #import pyIGRF   # https://pypi.org/project/pyIGRF/#description #12
+        import igrf # 13
 
 
         print('all libraries successfully load')

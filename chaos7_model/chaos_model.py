@@ -16,7 +16,6 @@ class CHAOS7():
 
         self.swarm_set = swarm_set
         self.chaos7_mat_model = load_CHAOS_matfile(CHAOS_PATH)
-        self.get_coef()
         self.cdf = pycdf.Library()
     def dt_unix_to_mjd(self, times):
         t = Time(times, format='iso', scale='utc')
@@ -37,24 +36,6 @@ class CHAOS7():
         dd = (FACT * (x * dy - y * dx)) / (h * h)
         return dd, dx, dy
 
-    def get_coef(self):
-        #lat=swarm_pos[idx, 0], lon=swarm_pos[idx, 1],  alt=swarm_pos[idx, 2]
-        #swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values = self.swarm_set
-        swarm_liter, swarm_pos, swarm_date, swarm_time, vector_components = self.swarm_set
-        sw_n, sw_e = vector_components[:, 0], vector_components[:, 1]
-        # B_r = -Z; B_phi = Y; B_theta = -X
-        theta = 90. - swarm_pos[:, 0]  # colat deg
-        phi = swarm_pos[:, 1]  # deg
-        radius = swarm_pos[:, 2]  # radius in km
-
-        time = self.dt_unix_to_mjd(
-            [str(a) + " " + str(b) for a, b in zip(swarm_date, swarm_time)])  # time in modified Julian date 2000
-
-        # computing core field
-        coeffs = self.chaos7_mat_model.synth_coeffs_tdep(time)  # SV max. degree 16
-        self.B_radius, self.B_theta, self.B_phi = synth_values(coeffs, radius, theta, phi)
-        # B_radius, B_theta, B_phi = self.chaos7_mat_model(time, radius, theta, phi)
-        self.SW_C_theta, self.SW_C_phi = (sw_n * -1) - self.B_theta, sw_e - self.B_phi
 
     def get_swarm_chaos_vector_subtraction(self):
         model = load_CHAOS_matfile(CHAOS_PATH)
@@ -90,9 +71,25 @@ class CHAOS7():
 
         #print('RMSE of F: {:.5f} nT'.format(np.std(F - F_swarm)))
 
-    def get_chaos_swarm_diff(self):
-        return self.SW_C_theta, self.SW_C_phi
-    def get_chaos_theta_phi(self):
-        return self.B_radius, self.B_theta, self.B_phi
 
+    """
+        def get_coef(self):
+        #lat=swarm_pos[idx, 0], lon=swarm_pos[idx, 1],  alt=swarm_pos[idx, 2]
+        #swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values = self.swarm_set
+        swarm_liter, swarm_pos, swarm_date, swarm_time, vector_components = self.swarm_set
+        sw_n, sw_e = vector_components[:, 0], vector_components[:, 1]
+        # B_r = -Z; B_phi = Y; B_theta = -X
+        theta = 90. - swarm_pos[:, 0]  # colat deg
+        phi = swarm_pos[:, 1]  # deg
+        radius = swarm_pos[:, 2]  # radius in km
 
+        time = self.dt_unix_to_mjd(
+            [str(a) + " " + str(b) for a, b in zip(swarm_date, swarm_time)])  # time in modified Julian date 2000
+
+        # computing core field
+        coeffs = self.chaos7_mat_model.synth_coeffs_tdep(time)  # SV max. degree 16
+        self.B_radius, self.B_theta, self.B_phi = synth_values(coeffs, radius, theta, phi)
+        # B_radius, B_theta, B_phi = self.chaos7_mat_model(time, radius, theta, phi)
+        self.SW_C_theta, self.SW_C_phi = (sw_n * -1) - self.B_theta, sw_e - self.B_phi
+
+    """

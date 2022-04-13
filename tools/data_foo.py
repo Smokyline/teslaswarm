@@ -23,6 +23,7 @@ from spacepy import coordinates as coord
 from spacepy.time import Ticktock
 import aacgmv2
 import warnings
+from pyproj import Proj, transform, CRS
 
 def eucl_distance(p1, p2_array):
     distY = (p1[0] - p2_array[:, 1]) ** 2  # check if y > deg
@@ -327,10 +328,6 @@ def magfield_variation(n_swarm, e_swarm, x_igrf, y_igrf, ):
     #   https://pypi.org/project/pyIGRF/
     igrf_value = pyIGRF.igrf_value(lat, lon, alt, year)
     return igrf_value"""
-
-def variation_of_magnetic_filed_intensity(lon, lat, alt, date):
-    igrf_variation = pyIGRF.igrf_variation(lat, lon, alt, date)
-    return igrf_variation
 
 def get_INTERMAGNET_observ_loc(codes):
     """получение локации обсерватории_code"""
@@ -643,14 +640,73 @@ def open_superMAG_vcf(date):
 
 """
 ########################################################################################
-########################################################################################
-########################################################################################
-########################################################################################
-
 
 изменения системы координат
 """
+# lat lon r geocentric to lat lon geodetic
 
+def geocentric_to_geodetic(sat_data, geoid_alt=False):
+    """
+        # geocentric_to_geodetic
+        :param sat_data[:, 0]: geocentric lat -90... 90
+        :param sat_data[:, 1]: geocentric lon -180... 180
+        :param sat_data[:, 2]: alt above center of Earth, km
+        :geoid_alt==True -> alt above Earth sea lvl (geoid), km
+        :return: [geodetic lat, geodetic lon, alt]
+        """
+    geocentric_xyz = np.empty((0, 3))
+    for i in range(len(sat_data)):
+        # lat, lon, r
+        geocentric_xyz = np.append(geocentric_xyz, [gc_latlon_to_xyz(sat_data[i, 0], sat_data[i, 1], sat_data[i, 2], )],
+                                   axis=0)
+    geodetic_latlonR = gc2gd(geocentric_xyz)
+    if geoid_alt:
+        geocentric_latlonAlt = np.append(sat_data[:, :2], np.array([geodetic_latlonR[:, 2]]).T, axis=1).astype(float)
+        return geocentric_latlonAlt
+    else:
+        return geodetic_latlonR
+
+def gc2gd(gc_xyz):
+
+    wgs84 = Proj('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+    geocentric = Proj('+proj=geocent +datum=WGS84 +units=m +no_defs')
+
+    # same
+    #wgs84 = CRS("EPSG:4326")   # (deg)  # Horizontal component of 3D system. Used by the GPS satellite navigation system and for NATO military geodetic surveying.
+    #geocentric = CRS("EPSG:4978")    # WGS 84 (geocentric) # X OTHER, Y EAST, Z NORTH,
+    x, y, z = gc_xyz[:, 0], gc_xyz[:, 1], gc_xyz[:, 2]
+    lon, lat, alt = transform(geocentric, wgs84, x, y, z)
+    alt = alt/1000  # m to km
+    return np.array([lat, lon, alt]).T
+
+def gc_latlon_to_xyz(lat, lon, R):
+
+    # Convert (lat, lon, elv) to (x, y, z).
+    lat = lat * math.pi / 180.0
+    lon = lon * math.pi / 180.0
+    radius = R*1000     # km to m
+    geo_centric_lat = geocentric_latitude(lat)
+
+    cos_lon = math.cos(lon)
+    sin_lon = math.sin(lon)
+    cos_lat = math.cos(geo_centric_lat)
+    sin_lat = math.sin(geo_centric_lat)
+    x = radius * cos_lon * cos_lat
+    y = radius * sin_lon * cos_lat
+    z = radius * sin_lat
+
+    return x, y, z
+
+def geocentric_latitude(lat):
+    # Convert geodetic latitude 'lat' to a geocentric latitude 'clat'.
+    # Geodetic latitude is the latitude as given by GPS.
+    # Geocentric latitude is the angle measured from center of Earth between a point and the equator.
+    # https:#en.wikipedia.org/wiki/Latitude#Geocentric_latitude
+    e2 = 0.00669437999014
+    return math.atan((1.0 - e2) * math.tan(lat))
+
+
+############
 
 
 def geo2mag(sw_pos, swarm_date, to_coord='MAG'):

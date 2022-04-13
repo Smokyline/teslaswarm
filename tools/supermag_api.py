@@ -14,7 +14,7 @@ import re
 import datetime
 
 """
-;supermag_api.py
+;supermag-api.py
 ; ================
 ; Author S. Antunes, based on supermag-api.pro by R.J.Barnes
 
@@ -304,7 +304,7 @@ def SuperMAGGetIndices(logon,start,extent,flagstring='',**kwargs):
   urlstr = sm_coreurl('indices.php',logon,start,extent)
   indices = sm_keycheck_indices(flagstring)
   urlstr += indices
-  print(urlstr)
+  
   # get the string array of JSON data     
   (status,data_list)=sm_GetUrl(urlstr,'json')
 
@@ -331,11 +331,9 @@ def SuperMAGGetData(logon,start,extent,flagstring,station,**kwargs):
   
   urlstr = sm_coreurl('data-api.php',logon,start,extent)
   indices = sm_keycheck_data(flagstring)
-  print(indices)
   urlstr += indices
-  urlstr += '&ground_station='+station.upper()
-  print(urlstr)
-
+  urlstr += '&station='+station.upper()
+  
   (status,data_list)=sm_GetUrl(urlstr,'json')
 
   # default is to return a dataframe, but can also return an array
@@ -404,7 +402,7 @@ def sm_microtest(choice,userid):
 
 def supermag_testing(userid):
 
-  start=[2017,9,18,10,40,00] # alt: start='2019-11-15T10:40'
+  start=[2019,11,15,10,40,00] # alt: start='2019-11-15T10:40'
 
   (status,stations) = SuperMAGGetInventory(userid,start,3600)
 
@@ -467,7 +465,7 @@ def supermag_testing(userid):
   # so you can convert a pandas series to a list
   stationlist2=sm_csvitem_to_list(mydata2b.SMLrstid) # goal is a list of stations
   slist = stationlist2[0] # grabs a list of stations for row 0
-  s1 = stationlist2[0][0] # grabs the first ground_station for row 0
+  s1 = stationlist2[0][0] # grabs the first station for row 0
 
   vgse=sm_csvitem_to_dict(mydata2b.vgse) # goal is a dict of coords or other values
   x = vgse[0]['X'] # grab just the 'X' value for the 1st row of data
