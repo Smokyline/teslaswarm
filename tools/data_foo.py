@@ -781,35 +781,6 @@ def geo2geomag_foo(glat: float, glon: float) :
 
     return mlat.reshape(glat_shape), mlon.reshape(glon_shape)
 
-"""def apex_coord_system_convert(swarm_pos, source_sys, dest_sys):
-    switched_swarm_pos = []
-    for lat, lon in swarm_pos:
-        lat_a, lon_a = apex_convert(lat, lon, source=source_sys, dest=dest_sys)
-        switched_swarm_pos.append([lat_a, lon_a])
-    return np.array(switched_swarm_pos)
-
-def apex_convert(lat, lon, source='geo', dest='qd', height=0, datetime=None,):
-    a = Apex()
-    lat_a, lon_a = a.convert(lat, lon, source, dest, height, datetime, precision=1e-10, ssheight=50*6371)
-    return lat_a, lon_a"""
-
-def geodetic2geocentric(theta, alt):
-    """
-    https://github.com/zzyztyy/pyIGRF
-    """
-    geocentric_colatitude, gccolat_minus_theta, geocentric_radius = calculate.geodetic2geocentric(theta, alt)
-    return geocentric_colatitude, gccolat_minus_theta
-
-def mlng2mlt(ut, mlng):
-    """
-    Relationship between MLT, geomagnetic longitude, and UT
-        MLT=UT+(MLNG-70)/15
-
-    Relationship between LT, geographic longitude, and UT
-        LT=UT+LNG/15
-
-    """
-    MLT = ut + (mlng - 70) / 15
 
 def latlt2cart(lat, lt, hemisphere):
     """
@@ -856,6 +827,7 @@ def pol2cart(rho, phi):
     return (x, y)
 
 def to_cast(sph_x, sph_y):
+    # geodetic_to_geocentric
     r = 6370
     desc_data = np.empty((0, 3))
     for i in range(len(sph_x)):
@@ -1030,4 +1002,33 @@ def vectorToGeogr(vect):
     ar[1] = np.arcsin(-vect[0] / np.linalg.norm(vect))
     return ar
 
+"""
+
+"""
+def apex_coord_system_convert(swarm_pos, source_sys, dest_sys):
+    switched_swarm_pos = []
+    for lat, lon in swarm_pos:
+        lat_a, lon_a = apex_convert(lat, lon, source=source_sys, dest=dest_sys)
+        switched_swarm_pos.append([lat_a, lon_a])
+    return np.array(switched_swarm_pos)
+
+def apex_convert(lat, lon, source='geo', dest='qd', height=0, datetime=None,):
+    a = Apex()
+    lat_a, lon_a = a.convert(lat, lon, source, dest, height, datetime, precision=1e-10, ssheight=50*6371)
+    return lat_a, lon_a
+
+def geodetic2geocentric(theta, alt):
+    ###https://github.com/zzyztyy/pyIGRF
+    geocentric_colatitude, gccolat_minus_theta, geocentric_radius = calculate.geodetic2geocentric(theta, alt)
+    return geocentric_colatitude, gccolat_minus_theta
+
+def mlng2mlt(ut, mlng):
+    '''
+     Relationship between MLT, geomagnetic longitude, and UT
+        MLT=UT+(MLNG-70)/15
+
+    Relationship between LT, geographic longitude, and UT
+        LT=UT+LNG/15
+    '''
+    MLT = ut + (mlng - 70) / 15
 """

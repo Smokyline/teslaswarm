@@ -29,11 +29,17 @@ def get_sql_response(swarm_type, from_date, to_date, fac2_mod=False):
                   "AND date BETWEEN %s AND %s" % (
                       swarm_type, from_date, to_date)
         # a % c SW_
+        """
+        SELECT `date`, latitude, longitude, radius, fac 
+        FROM sat_sec_fac_plain WHERE code='SW_' 
+        AND date BETWEEN UNIX_TIMESTAMP('2015-1-10 00:00:59') AND UNIX_TIMESTAMP('2015-1-10 05:59:59')
+        """
     else:
         #request = "SELECT date, latitude, longitude, radius, n, e, c FROM sat_sec_plain WHERE code='%s' " \
         request = "SELECT date, latitude, longitude, radius, n, e, c, f FROM sat_sec_plain WHERE code='%s' " \
                   "AND date BETWEEN %s AND %s" % (
                       swarm_type, from_date, to_date)
+    print(request)
     cur = sql_connect.cursor()
     cur.execute(request)
     respond = cur.fetchall()

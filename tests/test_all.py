@@ -81,7 +81,7 @@ def test_matlab_status():
 
 
 if __name__ == '__main__':
-    test_lib_load()
+    #test_lib_load()
     #test_chaos7_model_load()
-    #test_sql_connect()
+    test_sql_connect()
     #test_matlab_status()

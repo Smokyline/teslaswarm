@@ -93,26 +93,27 @@ def example2():
     # print(cdf_file.cdf_info())  # print cdf info/contents
 
     radius = cdf_file.varget('Radius') / 1000  # km     == 6805.59728
-    theta = 90. - cdf_file.varget('Latitude')  # colat deg
+    theta = 90. - cdf_file.varget('Latitude')  # 90... -90 to colat deg 180... 0
     phi = cdf_file.varget('Longitude')  # deg
 
-    print(theta[:10])
-    print(phi[:10])
-    print(radius[:10])
+    print(cdf_file.varget('Latitude'), np.max(cdf_file.varget('Latitude')), np.min(cdf_file.varget('Latitude')))
 
-    #print(theta[:10])
+
 
     time = cdf_file.varget('Timestamp')  # milli seconds since year 1
     time = time / (1e3*3600*24) - 730485  # time in modified Julian date 2000
     F_swarm = cdf_file.varget('F')
     cdf_file.close()
+    print(theta, np.max(theta), np.min(theta))
+
     theta_gsm, phi_gsm = transform_points(theta, phi,
                                           time=time, reference='gsm')
+    print(phi_gsm, np.max(phi_gsm), np.min(phi_gsm))
     index_day = np.logical_and(phi_gsm < 90, phi_gsm > -90)
     index_night = np.logical_not(index_day)
     # complete forward computation: pre-built not customizable (see ex. 1)
     B_radius, B_theta, B_phi = model(time, radius, theta, phi)
-    print(B_theta[:10])
+    #print(B_theta[:10])
     # compute field strength and plot together with data
     F = np.sqrt(B_radius**2 + B_theta**2 + B_phi**2)
 
