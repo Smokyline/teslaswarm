@@ -119,9 +119,9 @@ class SWORD():
             self.extend = None
 
         #plt.gca().set_axis_off()
-        plt.subplots_adjust(top=1, bottom=0.025, right=1, left=0.025,
+        """plt.subplots_adjust(top=1, bottom=0.025, right=1, left=0.025,
                             hspace=.025, wspace=.025)
-        plt.margins(0, 0)
+        plt.margins(0, 0)"""
         #plt.gca().xaxis.set_major_locator(plt.NullLocator())
         #plt.gca().yaxis.set_major_locator(plt.NullLocator())
 
@@ -157,58 +157,55 @@ class SWORD():
                 host = axs[i]
             ax2 = host.twiny()
 
-            """if len(np.array(sw_set[4]).shape) > 1:
-                Z = np.array(sw_set[4])[:, i]
-            else:
-                Z = np.array(sw_set[4])"""
-            #   time ticks
-            #str_ticks = [decode_dt_param(d + 'T' + t).strftime('%c') for d, t in zip(date_list, time_list)]
-            str_ticks = time_list
-            date_ticks = np.array([[x, label] for x, label in zip(np.arange(len(time_list)), str_ticks)])
+            #   main value plot
             host.plot(np.arange(len(time_list)), value, c='r', label=label)
+            time_ticks = np.arange(len(value))
+
+            #   top coord pos labels
+            geocoord_labels = np.array([str(lat) + ' ' + str(lon) for lat, lon in np.round(pos[:, :2], 2)])
+
+            #   time ticks
+            magcoord_labels = np.array(
+                np.round(mag2mlt(geo2mag(pos, date_list, to_coord='GSM')[:, :2], date_list, time_list), 2)).astype(str)
+            # magcoord_labels = np.array(np.round(mag2mlt(pos[:, :2], date_list, time_list), 2)).astype(str)
+            MLT_labels = np.array([mlt for mlat, mlt in magcoord_labels]).astype(str)
+            magcoord_labels = np.array([mlat + ' ' + mlt for mlat, mlt in magcoord_labels]).astype(str)
+            time_labels = []
+            for mlt, time in zip(MLT_labels, time_list):
+                    time_labels.append('UTC: ' + str(time))
+                    time_labels.append('\n\nMLT: ' + str(mlt))
+            time_labels = np.array(time_labels).astype(str)
+            time_labels = np.array([''.join(x) for x in zip(time_labels[0::2], time_labels[1::2])])
 
 
-            magcoord_pos = np.array(np.round(mag2mlt(geo2mag(pos, date_list, to_coord='GSM')[:, :2], date_list, time_list), 2)).astype(str)
-            #magcoord_pos = np.array(np.round(mag2mlt(pos[:, :2], date_list, time_list), 2)).astype(str)
-            magcoord_pos = np.array([lat + ' ' + lon for lat, lon in magcoord_pos]).astype(str)
-            coord_pos = np.array([str(lat) + ' ' + str(lon) for lat, lon in np.round(pos[:, :2], 2)])
+            # decode from str to datetime_full format
+            datetime_full = np.array([decode_str_dt_param(d + 'T' + t) for d, t in zip(date_list, time_list)], dtype='datetime64')
+            xaxis_label_total_num = 6
+            if len(time_ticks) >= xaxis_label_total_num:   # vertical grid lines
 
-            #pos_ticks = np.array([[x, label] for x, label in zip(np.arange(len(time_list)), coord_pos)])
-            #magpos_ticks = np.array([[x, label] for x, label in zip(np.arange(len(time_list)), magcoord_pos)])
-
-            coord_ticks = []
-            for mag, geo in zip(magcoord_pos, coord_pos):
-                    coord_ticks.append(str(mag))
-                    coord_ticks.append('\n\n' + str(geo))
-            coord_ticks = np.array(coord_ticks).astype(str)
-            coord_ticks = np.array([''.join(x) for x in zip(coord_ticks[0::2], coord_ticks[1::2])])
-            coordtick_locations = np.arange(len(pos))
-
-            # decode from str to datetime format
-            points_time = np.array([decode_str_dt_param(d + 'T' + t) for d, t in zip(date_list, time_list)], dtype='datetime64')
-
-            if len(date_ticks) >= 12:
-
-                if points_time[-1]-points_time[0] < np.timedelta64(1, 'h'):     # отрисовка vlines раз в минуту
-                    coord_ticks_arange = np.arange(0, len(coord_ticks), int(len(coord_ticks) / 14))  # top xlabels tick
-                    last_point = points_time[0]
+                if datetime_full[-1]-datetime_full[0] <= np.timedelta64(1, 'h'):     # отрисовка vlines раз в минуту
+                    print('time range <= 1h')
+                    last_point = datetime_full[0]
                     line_idx = []
-                    for k, point_time in enumerate(points_time):
-                        if points_time[-1] - points_time[0] > np.timedelta64(30, 'm'):
+                    for k, point_time in enumerate(datetime_full):
+                        if datetime_full[-1] - datetime_full[0] > np.timedelta64(30, 'm'):
                             minute_before = point_time - np.timedelta64(5, 'm')
                         else:
                             minute_before = point_time - np.timedelta64(1, 'm')
-                        if minute_before == last_point:
+                        if minute_before >= last_point:
                             last_point = point_time
                             line_idx.append(k)
-                    date_ticks = date_ticks[line_idx]
+                    time_labels = time_labels[line_idx]
+                    time_ticks = time_ticks[line_idx]
                     host.vlines(x=line_idx, ymin=np.min(value), ymax=np.max(value), color='b', linestyle='--', alpha=.5)
+                    x_ticks = line_idx  # top xlabels tick
                 else:
-                    coord_ticks_arange = np.arange(0, len(coord_ticks), int(len(coord_ticks) / 14))  # top xlabels tick
-                    date_ticks = date_ticks[coord_ticks_arange]
-
+                    x_ticks = np.arange(0, len(geocoord_labels), int(len(geocoord_labels) / xaxis_label_total_num))  # top xlabels tick
+                    time_labels = time_labels[x_ticks]
+                    time_ticks = time_ticks[x_ticks]
             else:
-                coord_ticks_arange = np.arange(0, len(coord_ticks))
+                x_ticks = np.arange(len(time_ticks))
+
 
             right_axes = []
             if draw_station is not None:
@@ -229,7 +226,7 @@ class SWORD():
 
                 except Exception as e:
                     print('superMAG Exception:', e)
-                    if ch_str == 'fac2':
+                    if ch_str == '':
                         for chnl in [0, 1, 2]:     # n, e, c
                             obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=chnl, delta=delta, station=draw_station)
                             ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, channels[chnl]))
@@ -252,18 +249,21 @@ class SWORD():
                 ax4.legend(loc=4)
                 ax4.grid(linestyle='--')
 
-            if 'fac2' in label:
+            if 'fac' in label:
                 label += ' nA/m²'
             else:
                 label += ' nT'
             host.set_ylabel(label)
-            host.set_xticks(np.array(date_ticks[:, 0]).astype(int))
-            host.set_xticklabels(date_ticks[:, 1], rotation=40)
+            host.set_xticks(time_ticks)
+            host.set_xticklabels(time_labels)
+            host.tick_params(axis='x', labelsize=11)
+            host.tick_params(axis='y', labelsize=11)
+
             ax2.set_xlim(host.get_xlim())
-            ax2.set_xticks(coordtick_locations[coord_ticks_arange])
-            ax2.set_xticklabels(coord_ticks[coord_ticks_arange])
-            ax2.tick_params(axis='x', labelsize=8)
-            ax2.annotate("MLat MLT\n\nLat Lon", xy=(-0.025, 1.037), xycoords=ax2.transAxes, size=8)
+            ax2.set_xticks(time_ticks)
+            ax2.set_xticklabels(geocoord_labels[time_ticks])
+            ax2.tick_params(axis='x', labelsize=11)
+            ax2.annotate("Lat Lon", xy=(-0.035, 1.037), xycoords=ax2.transAxes, size=11)
 
 
             #https://stackoverflow.com/questions/20532614/multiple-lines-of-x-tick-labels-in-matplotlib
@@ -303,7 +303,9 @@ class SWORD():
             last_annotate_point = points_time[0]
             for k, point_time in enumerate(points_time):
                 minute_before = point_time - np.timedelta64(1, 'm')
-                if minute_before == last_point:
+                five_minute_before = point_time - np.timedelta64(5, 'm')
+                #if minute_before == last_point or five_minute_before == last_annotate_point:
+                if minute_before >= last_point:
                     try:
                         x1, y1 = x[k], y[k]
                         x2, y2 = x[k + 1], y[k + 1]
@@ -323,51 +325,16 @@ class SWORD():
                         self.ax.add_line(line, )
                         if self.extend is not None:
                             if self.extend[0] < c1[0] < self.extend[1] and self.extend[2] < c1[1] < self.extend[3]:
-                                self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8, clip_on=True,
+                                self.ax.text(c1[0], c1[1], str(point_time), fontsize=8, clip_on=True,
                                              transform=ccrs.Geodetic())
                         else:
-                            self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8, clip_on=True,  transform=ccrs.Geodetic())
+                            self.ax.text(c1[0], c1[1], str(point_time), fontsize=8, clip_on=True,  transform=ccrs.Geodetic())
 
 
 
                     except Exception as e:
                         pass
                     last_point = point_time
-
-                five_minute_before = point_time - np.timedelta64(5, 'm')
-                if five_minute_before == last_annotate_point:
-                    try:
-                        x1, y1 = x[k], y[k]
-                        x2, y2 = x[k + 1], y[k + 1]
-
-                        # (x1, y1) + a(y2-y1, x1-x2)
-                        p1 = np.array((x1, y1))
-                        a1 = 1
-                        a2 = -1
-
-                        l1 = np.array([y2 - y1, x1 - x2])
-                        l1_length = np.sqrt(l1[0] ** 2 + l1[1] ** 2)
-                        l1 = l1 / l1_length
-
-                        l2 = np.array((a1 * l1[0], a1 * l1[1]))
-                        l3 = np.array((a2 * l1[0], a2 * l1[1]))
-
-                        c1 = p1 + l2
-                        c2 = p1 + l3
-                        line = Line2D([c1[0], x1, c2[0]],
-                                      [c1[1], y1, c2[1]], transform=ccrs.Geodetic())
-                        self.ax.add_line(line, )
-
-                        if self.extend is not None:
-                            if self.extend[0] < c1[0] < self.extend[1] and self.extend[2] < c1[1] < self.extend[3]:
-                                self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8,
-                                             transform=ccrs.Geodetic())
-                        else:
-                            self.ax.text(c1[0], c1[1], str(point_time).split('T')[1], fontsize=8,
-                                         transform=ccrs.Geodetic())
-
-                    except Exception as e:
-                        pass
                     last_annotate_point = point_time
 
         """for i, xy in enumerate(points):
@@ -381,13 +348,13 @@ class SWORD():
     def draw_swarm_scatter(self, points, values, custom_label=None, annotate=False):
         """отрисовка """
         # prepare colorbar, based on values
-        # 'n', 'e', 'c', fac2, mu, Dd
+        # 'n', 'e', 'c', fac, mu, Dd
         cb_type = 'zero_center'
         cmap = plt.get_cmap('seismic')
-        if custom_label in ['dBn', 'dBe', 'dBd']:
+        if custom_label in ['Bn', 'Be', 'Bc']:
             unit = 'SWARM ' + custom_label + ', nT'
-        elif custom_label == 'fac2':
-            unit = 'SWARM FAC2, nA/m²'
+        elif custom_label == 'FAC':
+            unit = 'SWARM FAC, nA/m²'
         elif custom_label == 'mu':
             unit = 'DMA anomaly lvl'
             cb_type = 'DMA_anomaly'
@@ -408,7 +375,7 @@ class SWORD():
         cmap_args = self.draw_colorbar(values=values, cmap=cmap, label=unit, cb_type=cb_type)
 
         s = np.power(len(values), -1/16) * 300
-        self.ax.scatter(points[:, 1], points[:, 0], s=s, c=values, **cmap_args, transform=ccrs.PlateCarree(), edgecolors='k', lw=0.3)
+        self.ax.scatter(points[:, 1], points[:, 0], s=s, c=values, **cmap_args, transform=ccrs.PlateCarree(), edgecolors='k', lw=0.15)
         #self.ax.scatter(points[:, 1], points[:, 0], c=values, cmap=cmap, norm=norm, transform=ccrs.PlateCarree())
 
         #str_values = np.format_float_positional(values, precision=3)
@@ -526,7 +493,9 @@ class SWORD():
         if self.proj_type == 'miller':
             rotation, orientation, pad, label_pad = 0, 'horizontal', 0.01, None
         else:
-            rotation, orientation, pad, label_pad = 270, 'vertical', 0.015, -0.5
+            #rotation, orientation, pad, label_pad = 270, 'vertical', 0.015, -0.1
+            rotation, orientation, pad, label_pad = 0, 'horizontal', 0.01, None
+
         #   https://stackoverflow.com/questions/15908371/matplotlib-colorbars-and-its-text-labels
         #cb = plt.colorbar(cm, ax=self.ax, shrink=0.4, orientation=orientation, fraction=0.1, pad=0.0025)
         cb = plt.colorbar(cm, ax=self.ax, orientation=orientation, shrink=0.35, fraction=0.05, pad=pad)

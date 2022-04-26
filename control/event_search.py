@@ -83,9 +83,9 @@ def main(input_events, selected=None, delta_minute=10):
                     to_date = event_dt + pd.Timedelta('%s minutes' % delta_minute)
                     try:
                         """swarm_setA = get_swarm_set('A', from_date, to_date, delta=delta,
-                                                                              fac2_mod=fac2)
+                                                                              fac_mod=fac2)
                                                     swarm_setC = get_swarm_set('C', from_date, to_date, delta=delta,
-                                                                              fac2_mod=fac2)
+                                                                              fac_mod=fac2)
                                                     sw_coord, sw_respond = calc_ACvector(sw_a_cd=swarm_setA[1], sw_c_cd=swarm_setC[1], sw_a_values=swarm_setA[4], sw_c_values=swarm_setC[4], channel=sw_channel)
                                                     swarm_set = ["|AC|", sw_coord, swarm_setA[2], swarm_setA[3], sw_respond]
                                                     """

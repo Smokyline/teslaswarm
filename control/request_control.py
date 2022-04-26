@@ -27,7 +27,7 @@ class teslaswarmControl():
         self.draw_auroral_s = None  # dt
 
         self.proj_extend_loc = None     # [-lon, +lon, -lat, +lat]
-        self.swarm_poly_loc = None      # [[-90, 50], [-90, 90], [25, 90], [25,50], [-90, 50]]
+        #self.swarm_poly_loc = None      # [[-90, 50], [-90, 90], [25, 90], [25,50], [-90, 50]]
         self.observ_code = None    # ['SFS']
 
         self.swarm_value_delta = 300
@@ -108,9 +108,6 @@ class teslaswarmControl():
     def set_proj_extend_loc(self, loc=None):
         self.proj_extend_loc = loc
 
-    def set_swarm_cutpoly_loc(self, loc=None):
-        self.swarm_poly_loc = loc
-
     def set_intermag_obs_codes(self, codes=None, deg_radius=5):
         self.observ_code = 'intermag_'+codes
         self.deg_radius = deg_radius
@@ -137,9 +134,9 @@ class teslaswarmControl():
     def set_txt_out(self, b=False):
         self.txt_out = b
 
-    def get_swarm_set(self, sw_liter='A', from_date=None, to_date=None, fac2_mod=False):
+    def get_swarm_set(self, sw_liter='A', from_date=None, to_date=None, fac_mod=False):
         #   получение датасета данных SWARM_X
-        return get_swarm_set(sw_liter, from_date, to_date, self.swarm_value_delta, fac2_mod)
+        return get_swarm_set(sw_liter, from_date, to_date, self.swarm_value_delta, fac_mod)
 
     def get_swarmAC_diff(self, swarm_set_A, swarm_set_C, sw_channel):
         #   получение датасета данных разности значений поля между SWARM_A и SWARM_C
@@ -180,8 +177,7 @@ class teslaswarmControl():
                                        draw_auroral_n=self.draw_auroral_n, draw_shape=self.draw_shape,
                                        draw_IGRFvector_diff=self.draw_IGRFvector_diff, draw_CHAOSvector_diff=self.draw_CHAOSvector_diff,
                                        observ_code_value=self.observ_code, measure_mu=self.measure_mu, mag_grid_coord=self.mag_grid_coord,
-                                       cut_swarm_value_bool=self.cut_swarm_value_bool,
-                                       swarm_poly_loc=self.swarm_poly_loc, proj_extend_loc=self.proj_extend_loc,
+                                       cut_swarm_value_bool=self.cut_swarm_value_bool, proj_extend_loc=self.proj_extend_loc,
                                        annotate_sw_value_bool=annotate_sw_value_bool, cut_deg_radius=self.deg_radius, txt_out=self.txt_out)
         if status == 1 and self.txt_out:
             message = out

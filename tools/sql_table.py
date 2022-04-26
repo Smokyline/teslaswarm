@@ -90,6 +90,8 @@ def get_swarm_set(swarm_liter, date_from, date_to, delta, fac2_mod=False):
         for v in [N, E, C, F]:
             swarm_values = np.append(swarm_values, np.array([v]).T, axis=1)
 
+    if swarm_liter == '_':
+        swarm_liter = 'A&C'
     print('-------------------------------------------------------------------------------------')
     print('The SWORD render will use data from swarm-%s, datetime from %s to %s' % (
     swarm_liter, swarm_date[0] + ' ' + swarm_time[0],

@@ -4,7 +4,7 @@ import sys
 # Find code directory relative to our directory
 sys.path.append(os.getcwd())
 
-def test_sql_connect(fac2_mod):
+def test_sql_connect(fac2_mod=False):
     try:
         from datetime import datetime
         import numpy as np
@@ -22,7 +22,7 @@ def test_sql_connect(fac2_mod):
 
         respond = np.array(respond)
         print('len before remove nines', len(respond))
-        # data = data_reduction(np.array(respond), delta=1, fac2_mod=True)
+        # data = data_reduction(np.array(respond), delta=1, fac_mod=True)
         idx999 = np.where(respond[:, 3] != 999)[0]
         respond = respond[idx999]
         print('len after remove nines', len(respond))

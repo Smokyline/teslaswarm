@@ -70,7 +70,7 @@ def get_image_page(request):
     sm = copy.deepcopy(TeslaSwarm)
     id = sm.get_id()  # name as timestamp in ms
 
-    fac2_mod = False
+    fac_mod = False
     if param_dict['sw_channel'] == 'n':
         sw_channel = 0
     elif param_dict['sw_channel'] == 'e':
@@ -79,7 +79,7 @@ def get_image_page(request):
         sw_channel = 2
     elif param_dict['sw_channel'] == 'fac2':
         sw_channel = None
-        fac2_mod = True
+        fac_mod = True
     else:
         sw_channel = 0
 
@@ -98,11 +98,13 @@ def get_image_page(request):
 
     if param_dict['proj_type'] != 'plot':
         if param_dict['sw_liter'] == 'AC':
-            swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
-            swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
+            swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+            swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
             SWARM_SET = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
+        elif param_dict['sw_liter'] == 'A&C':
+            SWARM_SET = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
         else:
-            SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
+            SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
 
     #   модель ионосферы
     if not ('undefined' in str(param_dict['iono_bz'])):
@@ -182,16 +184,17 @@ def get_image_page(request):
         for i, selected in enumerate(bool_set):
             if selected:
                 if i == 0:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
+                    swarm_set = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
                 elif i == 1:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='B', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
+                    swarm_set = sm.get_swarm_set(sw_liter='B', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
                 elif i == 2:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
-                elif i == 3:   # if |AC|
-                    print('AC')
-                    swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
-                    swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac2_mod=fac2_mod)
-                    swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
+                    swarm_set = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                elif i == 3:   # if A&C
+                    print('A&C fac')
+                    #swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    #swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    #swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
+                    swarm_set = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
 
                 if param_dict['near_auroral_points'] == 'true':
                     #include_data.append(sm.get_near_auroral_points_to_swarm(swarm_set=swarm_set))
@@ -199,8 +202,8 @@ def get_image_page(request):
                 else:
                     get_auroral = False
                     #include_data.append(None)
-                if fac2_mod:
-                    labels.append('swarm-%s %s' % (swarm_set[0], 'fac2'))
+                if fac_mod:
+                    labels.append('swarm-%s %s' % (swarm_set[0], 'fac'))
                 else:
                     lbs = ['n', 'e', 'c']
                     labels.append('swarm-%s %s' % (swarm_set[0], lbs[sw_channel]))

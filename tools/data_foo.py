@@ -25,11 +25,68 @@ import aacgmv2
 import warnings
 from pyproj import Proj, transform, CRS
 
-def eucl_distance(p1, p2_array):
-    distY = (p1[0] - p2_array[:, 1]) ** 2  # check if y > deg
-    distX = (p1[1] - p2_array[:, 0]) ** 2  # check if x > deg
-    dist = np.sum(np.array([distX, distY]).T, axis=1)
-    return np.sqrt(dist)
+
+
+
+def data_reduction(respond, delta, fac2_mod=False):
+    warnings.simplefilter("ignore", category=RuntimeWarning)
+    """сжимание секундных данных до delta шага"""
+    # fac2 = (Y, X, R), dt, (fac2)
+    # vector, measure mu, fac, chaos = (Y, X, R), dt, (N, E, C)
+    N, M = respond.shape
+    if fac2_mod:
+        idx999 = np.where(respond[:, 4] == 999)[0]
+        # respond = respond[idx999]
+        respond[idx999, 4] = np.nan
+        redu_resp = np.empty((0, 5))
+    else:
+        redu_resp = np.empty((0, M))
+
+    window = int(delta / 2)
+    if window == 0:
+        window = 1
+    st_idx = 0
+    while st_idx < N:
+        if st_idx != 0:
+            left_idx = st_idx - window
+        else:
+            left_idx = 0
+        right_idx = st_idx + window
+        delta_resp = respond[left_idx:right_idx]
+        if fac2_mod:
+            dt, y, x, r, fac2 = delta_resp[-1, (0, 1, 2, 3, 4)]
+            fac2 = np.nanmean(delta_resp[:, 4])
+            #if np.isnan(fac2):
+            #    fac2 = 0.
+            redu_resp = np.append(redu_resp, [[dt, y, x, r, fac2]], axis=0)
+
+        else:
+            dt, y, x, r = delta_resp[-1, (0, 1, 2, 3)]
+            n = np.mean(delta_resp[:, 4])
+            e = np.mean(delta_resp[:, 5])
+            c = np.mean(delta_resp[:, 6])
+            f = np.mean(delta_resp[:, 7])
+            redu_resp = np.append(redu_resp, [[dt, y, x, r, n, e, c, f]], axis=0)
+        st_idx += delta
+
+    if fac2_mod:
+        #https://pandas.pydata.org/docs/user_guide/missing_data.html
+        redu_resp[:, 4] = pd.DataFrame(np.array(redu_resp[:, 4]), dtype='float32').interpolate().to_numpy().T[0]
+
+
+        """
+        miss_values_pd = pd.DataFrame(redu_resp[:, 4])
+        fac2_miss_values_pd = miss_values_pd.fillna(miss_values_pd.mean())
+        #fac2_miss_values_pd = miss_values_pd.fillna(value=miss_values_pd)
+        redu_resp[:, 4] = fac2_miss_values_pd.T.to_numpy()
+        """
+
+            #for i, resp in enumerate(fac2_miss_values_pd):
+             #       if np.isnan(respond[i, 3]):
+             #                   print(respond[i], 'is nan')
+    return redu_resp
+
+
 
 def calc_ACvector(sw_a_cd, sw_c_cd, sw_a_values, sw_c_values, channel):
     """вычисление разницы векторов между Swarm A и Swarm C"""
@@ -107,79 +164,11 @@ def get_swarm_poly_loc(point, deg_radius):
     # poly = [-x, +x, -y, +y]
     #delta = deg_radius * 2
     x1, x2 = point[0] - deg_radius * 2, point[0] + deg_radius * 2
-    y1, y2 = point[1] - deg_radius * 1.5, point[1] + deg_radius * 1.5
+    y1, y2 = point[1] - deg_radius * 2, point[1] + deg_radius * 2
     return [x1, x2, y1, y2]
 
 #############
 
-
-def data_reduction(respond, delta, fac2_mod=False):
-    warnings.simplefilter("ignore", category=RuntimeWarning)
-    """сжимание секундных данных до delta шага"""
-    # fac2 = (Y, X, R), dt, (fac2)
-    # vector, measure mu, fac, chaos = (Y, X, R), dt, (N, E, C)
-    N, M = respond.shape
-    if fac2_mod:
-        idx999 = np.where(respond[:, 4] == 999)[0]
-        # respond = respond[idx999]
-        respond[idx999, 4] = np.nan
-        redu_resp = np.empty((0, 5))
-    else:
-        redu_resp = np.empty((0, M))
-
-    window = int(delta / 2)
-    if window == 0:
-        window = 1
-    st_idx = 0
-    while st_idx < N:
-        if st_idx != 0:
-            left_idx = st_idx - window
-        else:
-            left_idx = 0
-        right_idx = st_idx + window
-        delta_resp = respond[left_idx:right_idx]
-        if fac2_mod:
-            dt, y, x, r, fac2 = delta_resp[-1, (0, 1, 2, 3, 4)]
-            fac2 = np.nanmean(delta_resp[:, 4])
-            #if np.isnan(fac2):
-            #    fac2 = 0.
-            redu_resp = np.append(redu_resp, [[dt, y, x, r, fac2]], axis=0)
-
-        else:
-            dt, y, x, r = delta_resp[-1, (0, 1, 2, 3)]
-            n = np.mean(delta_resp[:, 4])
-            e = np.mean(delta_resp[:, 5])
-            c = np.mean(delta_resp[:, 6])
-            f = np.mean(delta_resp[:, 7])
-            redu_resp = np.append(redu_resp, [[dt, y, x, r, n, e, c, f]], axis=0)
-        st_idx += delta
-
-    if fac2_mod:
-        miss_values_pd = pd.DataFrame(redu_resp[:, 4])
-        fac2_miss_values_pd = miss_values_pd.fillna(miss_values_pd.mean())
-        #fac2_miss_values_pd = miss_values_pd.fillna(value=miss_values_pd)
-        redu_resp[:, 4] = fac2_miss_values_pd.T.to_numpy()
-
-            #for i, resp in enumerate(fac2_miss_values_pd):
-             #       if np.isnan(respond[i, 3]):
-             #                   print(respond[i], 'is nan')
-    return redu_resp
-
-def data_lat_up(xy, lat, hemisphere='N'):
-    idx = []
-    for i, (y, x) in enumerate(xy):
-        if hemisphere == 'N':
-            if y > lat:
-                idx.append(True)
-            else:
-                idx.append(False)
-
-        if hemisphere == 'S':
-            if y < lat:
-                idx.append(True)
-            else:
-                idx.append(False)
-    return idx
 
 def get_mag_coordinate_system_lines(date, geomag_pole):
     # geomag == True -> pole is Geomagnetic, else pole is geocentric Magnetospheric
@@ -239,6 +228,7 @@ def get_mag_coordinate_system_lines(date, geomag_pole):
     return mag_lat_lines, mag_lon_lines, annotate_points
 
 def swarm_egrf_vector_subtraction(swarm_pos, swarm_values_full, swarm_date):
+    #TODO igrf12 to 13
     year = int(swarm_date[0].split("-")[0])
     #switched_swarm_pos = convert_coord_system(swarm_pos[:, :2], dest_sys='apex')  # convert geo to mag coords
     #switched_swarm_pos = geo2mag(swarm_pos, swarm_date, to_coord='GSM')
@@ -568,6 +558,11 @@ def get_auroral_flux(dt, atype='diff', jtype='energy', hemishpere='N'):
 
     return XX, YY, value, np.array([y_2d, x_2d, value_2d]).T
 
+def eucl_distance(p1, p2_array):
+    distY = (p1[0] - p2_array[:, 1]) ** 2  # check if y > deg
+    distX = (p1[1] - p2_array[:, 0]) ** 2  # check if x > deg
+    dist = np.sum(np.array([distX, distY]).T, axis=1)
+    return np.sqrt(dist)
 
 def get_nearest_auroral_point_to_swarm(swarm_set):
     swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values = swarm_set

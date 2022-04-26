@@ -26,8 +26,8 @@ from_date, to_date = decode_str_dt_param(from_date), decode_str_dt_param(to_date
 
 # swarm_liter, swarm_position, swarm_date, swarm_time, swarm_values
 swarm_set_A = get_swarm_set('A', from_date, to_date, delta=delta, fac2_mod=False)
-#swarm_set_B = get_swarm_set('B', from_date, to_date, delta=delta, fac2_mod=True)
-#swarm_set_C = get_swarm_set('C', from_date, to_date, delta=delta, fac2_mod=False)
+#swarm_set_B = get_swarm_set('B', from_date, to_date, delta=delta, fac_mod=True)
+#swarm_set_C = get_swarm_set('C', from_date, to_date, delta=delta, fac_mod=False)
 
 # swarm |AC|
 #sw_coord, sw_respond = calc_ACvector(sw_a_cd=swarm_set_A[1], sw_c_cd=swarm_set_C[1], sw_a_values=swarm_set_A[4], sw_c_values=swarm_set_C[4], channel=sw_channel)
@@ -40,9 +40,9 @@ swarm_set_A = get_swarm_set('A', from_date, to_date, delta=delta, fac2_mod=False
 X, Y = swarm_pos[:, 0], swarm_pos[:, 1]
 Z = swarm_values.ravel()"""
 
-#fac_set_A = get_swarm_set('A', from_date, to_date, delta=delta, fac2_mod=True)
-#fac_set_B = get_swarm_set('B', from_date, to_date, delta=delta, fac2_mod=True)
-#fac_set_C = get_swarm_set('C', from_date, to_date, delta=delta, fac2_mod=True)
+#fac_set_A = get_swarm_set('A', from_date, to_date, delta=delta, fac_mod=True)
+#fac_set_B = get_swarm_set('B', from_date, to_date, delta=delta, fac_mod=True)
+#fac_set_C = get_swarm_set('C', from_date, to_date, delta=delta, fac_mod=True)
 #   if use in plot -> sw_channel = None
 
 #auroral_to_swarm_A = get_nearest_auroral_point_to_swarm(fac_set_A)

@@ -8,7 +8,7 @@ def get_proj_image(swarm_info, proj_type,
                    ionomodel_param=None, draw_auroral_s=None,
                    draw_auroral_n=None, draw_shape=None, draw_IGRFvector_diff=False, draw_CHAOSvector_diff=False,
                    observ_code_value=None, measure_mu=False, mag_grid_coord=False,
-                   cut_swarm_value_bool=False, swarm_poly_loc=None, proj_extend_loc=None,
+                   cut_swarm_value_bool=False, proj_extend_loc=None,
                    annotate_sw_value_bool=False, cut_deg_radius=5, txt_out=False):
     swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values_nec = swarm_info[0]   # swarm_set
     from_date, to_date, swarm_channel = swarm_info[1], swarm_info[2], swarm_info[3]
@@ -16,9 +16,13 @@ def get_proj_image(swarm_info, proj_type,
     STATUS = 1
 
     if len(np.array(swarm_values_nec).shape) > 1 and swarm_channel is not None:
-        FAC2 = True
+        swarm_values = swarm_values_nec[:, swarm_channel]
+        legend_label = ['Bn', 'Be', 'Bc'][swarm_channel]
+        d2txt.SWARM_channel = ['N', 'E', 'C'][swarm_channel]
     else:
-        FAC2 = False
+        swarm_values = swarm_values_nec  # fac
+        legend_label = 'FAC'
+        d2txt.SWARM_channel = 'FAC'
 
     #   приближение до OBS области
     #   extend_loc = [-x, +x, -y, +y]
@@ -31,14 +35,12 @@ def get_proj_image(swarm_info, proj_type,
         if obs_org == 'supermag':
             obs_location = None
         proj_extend_loc = get_swarm_poly_loc(obs_location, deg_radius=cut_deg_radius)
-        cut_swarm_value_bool = True
-
 
     #   установка границ проекции на основе координат области значений swarm
-    if swarm_poly_loc is not None:
-        swarm_poly_loc = np.array(swarm_poly_loc)
-        lat_min, lat_max = np.min(swarm_poly_loc[:, 1]) - 5, np.max(swarm_poly_loc[:, 1]) + 5
-        lon_min, lon_max = np.min(swarm_poly_loc[:, 0]) - 5, np.max(swarm_poly_loc[:, 0]) + 5
+    if proj_extend_loc is not None:
+        #swarm_poly_loc = np.array(swarm_poly_loc)
+        lat_min, lat_max = np.min(proj_extend_loc[2:]), np.max(proj_extend_loc[2:])
+        lon_min, lon_max = np.min(proj_extend_loc[:2]), np.max(proj_extend_loc[:2])
         if lat_max >= 90:
             lat_max = 89.9
         if lat_min <= -90:
@@ -47,14 +49,14 @@ def get_proj_image(swarm_info, proj_type,
             lon_max = 179.9
         if lon_min <= -180:
             lon_min = -179.9
-        proj_extend_loc = [lon_min, lon_max, lat_min, lat_max, ]
-        cut_swarm_value_bool = True
+        proj_extend_loc = [lon_min, lon_max, lat_min, lat_max]
 
     #   подпись к проеции
     ax_label = fr'swarm_{swarm_liter} {from_date} -- {to_date} '
-    if proj_extend_loc is not None:
+    if proj_extend_loc is not None or observ_code_value is not None:
         ax_label += 'loc:lat{%0.2f:%0.2f},lon{%0.2f:%0.2f}' % (proj_extend_loc[2], proj_extend_loc[3],
                                                    proj_extend_loc[0], proj_extend_loc[1],)
+        proj_type = 'miller'
         cut_swarm_value_bool = True
 
     ######################################################################################################
@@ -99,15 +101,6 @@ def get_proj_image(swarm_info, proj_type,
     if mag_grid_coord:
         sword.draw_mag_coord_lines(swarm_date[0], geomag_pole=True)    # True to_coord='MAG' /  False to_coord='GSM'
 
-    #   выбор канала n, e, c
-    if FAC2:
-        swarm_values = swarm_values_nec[:, swarm_channel]
-        legend_label = ['dBn', 'dBe', 'dBd'][swarm_channel]
-        d2txt.SWARM_channel = ['N', 'E', 'C'][swarm_channel]
-    else:
-        swarm_values = swarm_values_nec  # fac2
-        legend_label = 'fac2'
-        d2txt.SWARM_channel = 'FAC2'
 
     d2txt.annotate = ax_label
 
@@ -124,11 +117,7 @@ def get_proj_image(swarm_info, proj_type,
     """
 
     if cut_swarm_value_bool:
-        if swarm_poly_loc is not None:
-            print('cut swarm_pos manual')
-            p_in_p, poly = get_points_in_poly(swarm_pos[:, :2], swarm_poly_loc, proj_type)
-            sword.draw_polygon(poly)
-        elif proj_extend_loc is not None:
+        if proj_extend_loc is not None:
             print('cut swarm_pos manual by proj_extend_loc')
             poly_loc = [[proj_extend_loc[1],proj_extend_loc[2],], [proj_extend_loc[1],proj_extend_loc[3],],
                         [proj_extend_loc[0],proj_extend_loc[3],], [proj_extend_loc[0],proj_extend_loc[2],]]
@@ -288,7 +277,7 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
                 label = labels[i]
                 draw_list.append([label, date_list, time_list, value, position_list])
                 d2txt.SWARM_liter = label.rsplit('-')[1][0]
-                d2txt.SWARM_channel = 'FAC2'
+                d2txt.SWARM_channel = 'FAC'
                 d2txt.append(position_list, 'SWARM_pos')
                 d2txt.append(value, 'SWARM')
             else:

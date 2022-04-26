@@ -15,7 +15,7 @@ def test_get_swarm_data(fac2_mod=False, chaos_mod=False):
             delta = 300
 
             swarm_set = get_swarm_set(sw_liter, from_date, to_date, delta, fac2_mod, chaos_mod)
-            print('fac2_mod=%s, chaos_mod=%s' % (fac2_mod, chaos_mod))
+            print('fac_mod=%s, chaos_mod=%s' % (fac2_mod, chaos_mod))
             print('swarm_liter:', swarm_set[0])
             print('swarm_position:', swarm_set[1])
             print('swarm_date:', swarm_set[2])
