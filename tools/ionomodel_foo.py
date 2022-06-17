@@ -2,7 +2,7 @@ import numpy as np
 import subprocess
 import time
 from teslaswarm.settings import BASE_DIR
-from tools.data_foo import xyz_to_cast, xyz_to_spher, geo_to_mag_coord
+from tools.data_foo import MAG2GEO, cart_to_cartGeomag_coord, sph_to_cart, cart_to_geo, get_lon_from_LT
 import platform
 
 
@@ -51,8 +51,8 @@ def array_to_string(xyz):
         str_array += s
     return str_array
 
-def get_ionomodel_surf_file(param_dict):
-
+def get_ionomodel_surf_file(param_dict, dt):
+    # https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2005JA011465
     write_param(param_dict)     # dict to file
     run_exe_program()   # run wine
     time.sleep(3)
@@ -64,18 +64,38 @@ def get_ionomodel_surf_file(param_dict):
     xyz_array = np.empty((0, 3))
     for line in file.readlines():
         xyz_array = np.append(xyz_array, [np.array(line.split()).astype(float)], axis=0)
-    X = xyz_array[:, 1]
-    Y = xyz_array[:, 0] * -1
+    mglat = xyz_array[:, 0]
+    mglon = xyz_array[:, 1]
     Z = xyz_array[:, 2]
 
+
+    #GEO_latlon = np.array([MAG2GEO(geolat[i], geolon[i], dt) for i in range(len(geolat))])
+    #lat = GEO_latlon[:, 1]
+    #lon = GEO_latlon[:, 0]
+
     if file_name[0] == 'n':
-        PHI_P, THETA_P = 252.6, 80.4
+        THETA_P, PHI_P  = 213.00, 85.54
     else:
-        PHI_P, THETA_P = 107.4, -80.4
+        THETA_P, PHI_P = 223., -64.24
+    lon_to360 = lambda x: (x - 180) % 360 - 180  # -180 180 to 0 360
+    lon_to180 = lambda x: (x + 180) % 360 - 180  # 0 360 to -180 180
 
-    desc_mag = xyz_to_cast(X, Y)
-    desc_geo = geo_to_mag_coord(desc_mag, PHI_P, THETA_P)
-    x, y = xyz_to_spher(desc_geo)
+    desc_mag = sph_to_cart(mglon, mglat)
+    desc_mag = cart_to_cartGeomag_coord(desc_mag, THETA_P, PHI_P)
+    lat, lon = cart_to_geo(desc_mag)
 
+    seconds_per_day = 24 * 60 * 60.0
+    ut_sec = float(param_dict['ut'])*(60 * 60.0)
+    midnight_lon = (ut_sec / seconds_per_day) * 360
+    print(midnight_lon, 'midn lon')
+    lon = lon_to360(lon) + midnight_lon
+    for i in range(len(lon)):
+        if lon[i] < 0:
+            lon[i] = 360 + lon[i]
+        elif lon[i] > 360:
+            lon[i] = lon[i] - 360
+    #lon = lon_to180(lon)
+    print(lon.min(), lon.max(), np.mean(lon), 'X')
+    print(lat.min(), lat.max(), np.mean(lat), 'Y')
     # print('\nMEAN: %s\n--------------' % np.mean(Z))
-    return np.array([x, y, Z]).T
+    return np.array([lon, lat, Z]).T

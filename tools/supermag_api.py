@@ -489,7 +489,7 @@ def supermag_testing(userid):
   
 
 #  Uncomment to run quick sample tests
-# userid=YOUR_SUPERMAG_USER_ID
+#userid='pilipenko'
 #sm_microtest(1,userid)   # sample stations fetch
 #sm_microtest(2,userid)   # sample data fetch, with plotting
 #sm_microtest(3,userid)   # sample indices fetch, with plotting

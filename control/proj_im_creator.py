@@ -10,17 +10,17 @@ def get_proj_image(swarm_info, proj_type,
                    observ_code_value=None, measure_mu=False, mag_grid_coord=False,
                    cut_swarm_value_bool=False, proj_extend_loc=None,
                    annotate_sw_value_bool=False, cut_deg_radius=5, txt_out=False):
-    swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values_nec = swarm_info[0]   # swarm_set
+    swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values_necf = swarm_info[0]   # swarm_set
     from_date, to_date, swarm_channel = swarm_info[1], swarm_info[2], swarm_info[3]
     d2txt = Data2Text(SWARM_liter=swarm_liter)
     STATUS = 1
 
-    if len(np.array(swarm_values_nec).shape) > 1 and swarm_channel is not None:
-        swarm_values = swarm_values_nec[:, swarm_channel]
-        legend_label = ['Bn', 'Be', 'Bc'][swarm_channel]
-        d2txt.SWARM_channel = ['N', 'E', 'C'][swarm_channel]
+    if len(np.array(swarm_values_necf).shape) > 1 and swarm_channel is not None:
+        swarm_values = swarm_values_necf[:, swarm_channel]
+        legend_label = ['N', 'E', 'C', 'F'][swarm_channel]
+        d2txt.SWARM_channel = ['N', 'E', 'C', 'F'][swarm_channel]
     else:
-        swarm_values = swarm_values_nec  # fac
+        swarm_values = swarm_values_necf  # fac
         legend_label = 'FAC'
         d2txt.SWARM_channel = 'FAC'
 
@@ -30,10 +30,11 @@ def get_proj_image(swarm_info, proj_type,
     #if cut_obs_swarm_value_bool == True and proj_type != 'plot':
     if observ_code_value is not None and proj_type != 'plot':
         obs_org, obs_code = observ_code_value.split('_')
+        obs_location = [0, 0]
         if obs_org == 'intermag':
             obs_location = get_INTERMAGNET_observ_loc(obs_code)[:2]
         if obs_org == 'supermag':
-            obs_location = None
+            obs_location = get_superMAG_observ_loc(obs_code)[:2]
         proj_extend_loc = get_swarm_poly_loc(obs_location, deg_radius=cut_deg_radius)
 
     #   установка границ проекции на основе координат области значений swarm
@@ -42,30 +43,35 @@ def get_proj_image(swarm_info, proj_type,
         lat_min, lat_max = np.min(proj_extend_loc[2:]), np.max(proj_extend_loc[2:])
         lon_min, lon_max = np.min(proj_extend_loc[:2]), np.max(proj_extend_loc[:2])
         if lat_max >= 90:
-            lat_max = 89.9
+            lat_max = 89.99
         if lat_min <= -90:
-            lat_min = -89.9
+            lat_min = -89.99
         if lon_max >= 180:
-            lon_max = 179.9
+            lon_max = 179.99
         if lon_min <= -180:
-            lon_min = -179.9
+            lon_min = -179.99
         proj_extend_loc = [lon_min, lon_max, lat_min, lat_max]
+
+    sword = SWORD(proj_type=proj_type, extend=proj_extend_loc)
+
+    dt_from = decode_str_dt_param(swarm_date[0]+'T'+swarm_time[0])
+    dt_to = decode_str_dt_param(swarm_date[-1]+'T'+swarm_time[-1])
+    if (dt_to - dt_from) < datetime.timedelta(minutes=30):
+        sword.draw_sun_terminator(swarm_date, swarm_time)
 
     #   подпись к проеции
     ax_label = fr'swarm_{swarm_liter} {from_date} -- {to_date} '
-    if proj_extend_loc is not None or observ_code_value is not None:
-        ax_label += 'loc:lat{%0.2f:%0.2f},lon{%0.2f:%0.2f}' % (proj_extend_loc[2], proj_extend_loc[3],
-                                                   proj_extend_loc[0], proj_extend_loc[1],)
-        proj_type = 'miller'
+    if sword.extend is not None or observ_code_value is not None:
+        ax_label += 'loc:lat{%0.2f:%0.2f},lon{%0.2f:%0.2f}' % (sword.extend[2], sword.extend[3],
+                                                   sword.extend[0], sword.extend[1],)
         cut_swarm_value_bool = True
 
     ######################################################################################################
     #   инициация рендера, указание проекции, и если требуется extend_loc - приближение конкретной области
-    sword = SWORD(proj_type=proj_type, extend=proj_extend_loc)
 
     #   отрисовка на проекции иономодели
     if ionomodel_param is not None:
-        fac_surf = get_ionomodel_surf_file(ionomodel_param)
+        fac_surf = get_ionomodel_surf_file(ionomodel_param, dt_from)
         if ionomodel_param['hem'] == 'n':
             sword.draw_ionomodel(fac_surf, type=['northern', ionomodel_param['type']])
             d2txt.ionomodel_shp = 'n'
@@ -101,7 +107,6 @@ def get_proj_image(swarm_info, proj_type,
     if mag_grid_coord:
         sword.draw_mag_coord_lines(swarm_date[0], geomag_pole=True)    # True to_coord='MAG' /  False to_coord='GSM'
 
-
     d2txt.annotate = ax_label
 
     # выбор точек измерений SWARM в указанном полигоне
@@ -117,10 +122,10 @@ def get_proj_image(swarm_info, proj_type,
     """
 
     if cut_swarm_value_bool:
-        if proj_extend_loc is not None:
+        if sword.extend is not None:
             print('cut swarm_pos manual by proj_extend_loc')
-            poly_loc = [[proj_extend_loc[1],proj_extend_loc[2],], [proj_extend_loc[1],proj_extend_loc[3],],
-                        [proj_extend_loc[0],proj_extend_loc[3],], [proj_extend_loc[0],proj_extend_loc[2],]]
+            poly_loc = [[sword.extend[1],sword.extend[2],], [sword.extend[1],sword.extend[3],],
+                        [sword.extend[0],sword.extend[3],], [sword.extend[0],sword.extend[2],]]
             p_in_p, poly = get_points_in_poly(swarm_pos[:, :2], poly_loc, proj_type)
         if observ_code_value is not None:
 
@@ -134,7 +139,7 @@ def get_proj_image(swarm_info, proj_type,
         #print(p_in_p)
         swarm_pos_in_poly = swarm_pos[p_in_p]
         swarm_values_in_poly = swarm_values[p_in_p]
-        swarm_values_full_in_poly = swarm_values_nec[p_in_p]
+        swarm_values_full_in_poly = swarm_values_necf[p_in_p]
         swarm_date_in_poly, swarm_time_in_poly = swarm_date[p_in_p], swarm_time[p_in_p]
         print('len cut pos', len(swarm_pos_in_poly))
         vline_min_path = True
@@ -152,7 +157,7 @@ def get_proj_image(swarm_info, proj_type,
 
         swarm_pos_in_poly = swarm_pos
         swarm_values_in_poly = swarm_values
-        swarm_values_full_in_poly = swarm_values_nec
+        swarm_values_full_in_poly = swarm_values_necf
         swarm_date_in_poly, swarm_time_in_poly = swarm_date, swarm_time
         vline_min_path = False
     d2txt.append(swarm_pos_in_poly, name='SWARM_pos')
@@ -164,29 +169,29 @@ def get_proj_image(swarm_info, proj_type,
         vline_dt = np.array(swarm_dt)
     else:
         vline_dt = None
-    sword.draw_swarm_path(swarm_pos[:, :2], points_time=vline_dt)
+    sword.draw_swarm_path(swarm_pos, points_time=vline_dt)
 
     # отрисовка вектора (X, Y, n, e) или (X, Y, |n-x|, |e-y|)
     if draw_IGRFvector_diff or draw_CHAOSvector_diff:
-        #vector_components = swarm_values_nec[:, :2]   # n,e component
-        vector_components = swarm_values_full_in_poly[:, :2]   # n,e component
-        chaosm = CHAOS7(swarm_set=[swarm_liter, swarm_pos_in_poly, swarm_date_in_poly, swarm_time_in_poly, vector_components])
+        #vector_components = swarm_values_necf[:, :2]   # n,e component
+        vector_components = swarm_values_full_in_poly   # n,e,c,f component
         if draw_IGRFvector_diff:
-            vector_subtraction = swarm_egrf_vector_subtraction(swarm_pos_in_poly, vector_components, swarm_date_in_poly)
+            swarm_dt_in_poly = [decode_str_dt_param(d+'T'+t) for d, t in zip(swarm_date_in_poly, swarm_time_in_poly)]
+            vector_subtraction = swarm_egrf_vector_subtraction(swarm_pos_in_poly, vector_components, swarm_dt_in_poly)
             model_name = 'IGRF'
         elif draw_CHAOSvector_diff:
+            chaosm = CHAOS7(
+                swarm_set=[swarm_liter, swarm_pos_in_poly, swarm_date_in_poly, swarm_time_in_poly, vector_components])
             vector_subtraction = chaosm.get_swarm_chaos_vector_subtraction()
             model_name = 'CHAOS7'
-
-        swarm_values_in_poly = vector_subtraction[:, 0]     # dd
+        #print(vector_subtraction, 'vector substr')
+        swarm_values_in_poly = vector_subtraction[:, swarm_channel]     # dd
         vector_components = vector_subtraction[:, (1, 2)]   # dx, dy
 
-        # convert to geomagnetic coords
-        #swarm_pos_in_poly = geo2mag(swarm_pos_in_poly, swarm_date_in_poly)
-        legend_label = model_name + '_Dd'
-        d2txt.append(swarm_values_in_poly, name='SWARM_%s'%model_name)
-        ax_label += '|SWARM-%s|'%model_name
-    elif measure_mu:
+        legend_label = 'SWARM-%s_%s' % (model_name, ['dN', 'dE', 'dC', 'dF'][swarm_channel])
+        d2txt.append(swarm_values_in_poly, name=legend_label)
+        ax_label += ' %s ' % legend_label
+    if measure_mu:
         swarm_values_in_poly = get_measure_mu(swarm_values_in_poly)
         ax_label += ' measure_mu '
         legend_label = 'mu'
@@ -208,8 +213,8 @@ def get_proj_image(swarm_info, proj_type,
     # если полигона нет - отрисовка всех (swarm_pos_in_poly = swarm_pos)
     if STATUS == 1:
 
-        sword.draw_swarm_scatter(swarm_pos_in_poly[:, :2], swarm_values_in_poly, custom_label=legend_label,
-                                 annotate=annotate_sw_value_bool)  # отрисовка значение точек на орбите
+        sword.draw_swarm_scatter(swarm_pos_in_poly, swarm_values_in_poly, custom_label=legend_label,
+                                 annotate=False)  # отрисовка значение точек на орбите
         if draw_CHAOSvector_diff or draw_IGRFvector_diff:
             sword.draw_vector(swarm_pos_in_poly, B=vector_components)
 
@@ -238,7 +243,7 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
     #swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values = swarm_info[0]
     #from_date, to_date = swarm_info[1], swarm_info[2]
     # инициация рендера
-    sword = SWORD()
+    sword = SWORD(proj_type='plot')
 
     #   отрисовка графика
     draw_list = []

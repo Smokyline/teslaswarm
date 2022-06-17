@@ -36,16 +36,23 @@ class CHAOS7():
         dd = (FACT * (x * dy - y * dx)) / (h * h)
         return dd, dx, dy
 
+    def calc_F(self, X, Y, Z):
+        dF = []
+        for x, y, z in zip(X, Y, Z):
+            F = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+            dF = np.append(dF, F)
+        return np.array(dF)
 
     def get_swarm_chaos_vector_subtraction(self):
         model = load_CHAOS_matfile(CHAOS_PATH)
 
         swarm_liter, swarm_pos, swarm_date, swarm_time, vector_components = self.swarm_set
-        sw_n, sw_e = vector_components[:, 0], vector_components[:, 1]
-
+        sat_N, sat_E, sat_C = vector_components[:, 0], vector_components[:, 1], vector_components[:, 2]
+        sat_F = self.calc_F(sat_N, sat_E, sat_C)
         theta = 90. - swarm_pos[:, 0]  # colat deg
         phi = swarm_pos[:, 1]  # deg
         radius = swarm_pos[:, 2]  # radius in km
+        print(radius)
         #print(theta[:10])
         #print(phi[:10])
         #print(radius[:10])
@@ -60,12 +67,19 @@ class CHAOS7():
 
         # complete forward computation: pre-built not customizable (see ex. 1)
         B_radius, B_theta, B_phi = model(time, radius, theta, phi)
+        F_chaos = self.calc_F(B_radius, B_theta, B_phi)
+        B_theta = B_theta * -1  # switch chaos vector coord
+        B_radius = B_radius * -1  # switch chaos vector coord
 
-        B = []
-        for n, e, x, y in zip(sw_n, sw_e, B_theta, B_phi):
-            dd, dx, dy = self.magfield_variation(n, e, x*-1, y)
-            B.append([dd, dx, dy])
-        return np.array(B)
+        print(np.array([sat_N, sat_E, sat_C,sat_F]).T, 'swarm')
+        print(np.array([B_theta, B_phi, B_radius, F_chaos]).T, 'chaos')
+
+        dN = sat_N - B_theta
+        dE = sat_E - B_phi
+        dC = sat_C - B_radius
+        dF = sat_F - F_chaos
+        B_diff = np.array([dN, dE, dC, dF]).T
+        return B_diff
         # compute field strength and plot together with data
         #F = np.sqrt(B_radius ** 2 + B_theta ** 2 + B_phi ** 2)
 

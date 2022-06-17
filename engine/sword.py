@@ -9,6 +9,7 @@ from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.cm as cm
 
 import cartopy
 import cartopy.crs as ccrs
@@ -31,7 +32,7 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from scipy.interpolate import griddata
 from teslaswarm.settings import STATIC_OS_PATH
 from tools.dt_foo import decode_str_dt_param, decode_str_time_param
-from tools.data_foo import get_mag_coordinate_system_lines, geo2mag, mag2mlt, get_sMAGstation_value_by_time
+from tools.data_foo import *
 
 class SWORD():
     """
@@ -41,24 +42,24 @@ class SWORD():
         #   custom projection
         #   https://matplotlib.org/stable/gallery/misc/custom_projection.html#sphx-glr-gallery-misc-custom-projection-py
         self.proj_type = proj_type
+        self.transform = ccrs.PlateCarree()
 
         # Orthographic or Miller image projection
         if proj_type == 'ortho_n':
-            projection = ccrs.Orthographic(central_latitude=90., central_longitude=0)
+            self.projection = ccrs.Orthographic(central_latitude=90., central_longitude=0)
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
             self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
-            ax = self.fig.add_subplot(1, 1, 1, projection=projection)
+            ax = self.fig.add_subplot(1, 1, 1, projection=self.projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
-            ax.coastlines(resolution='110m', color='k', zorder=7)
+            ax.coastlines(resolution='110m', color='k', zorder=1)
             ax.add_feature(cfeature.LAND, facecolor='0.75', zorder=0)
             gl = ax.gridlines(draw_labels=True)
-            gl.xlocator = mticker.FixedLocator([-180, -150, -120, -90, -60, -30, 0,
-                                                30, 60, 90, 120, 150, 180])
+            gl.xlocator = mticker.FixedLocator(np.arange(-180, 180, 15))
             gl.ylocator = mticker.FixedLocator(np.arange(-90, 91, 10))
             gl.xformatter = LongitudeFormatter()
             gl.yformatter = LatitudeFormatter()
-            gl.ylabel_style = {'size': 12, 'color': 'gray'}
-            gl.xlabel_style = {'size': 12, 'color': 'gray'}
+            gl.ylabel_style = {'size': 11, 'color': 'gray'}
+            gl.xlabel_style = {'size': 11, 'color': 'gray'}
             ax.set_global()
             global_extent = ax.get_extent(crs=ccrs.PlateCarree())
             ax.set_extent(global_extent[:2] + (50, 90), crs=ccrs.PlateCarree())
@@ -67,21 +68,20 @@ class SWORD():
             self.ax = ax
 
         if proj_type == 'ortho_s':
-            projection = ccrs.Orthographic(central_latitude=-90., central_longitude=0)
+            self.projection = ccrs.Orthographic(central_latitude=-90., central_longitude=0)
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
             self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
-            ax = self.fig.add_subplot(1, 1, 1, projection=projection)
+            ax = self.fig.add_subplot(1, 1, 1, projection=self.projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
-            ax.coastlines(resolution='110m', color='k', zorder=7)
+            ax.coastlines(resolution='110m', color='k', zorder=1)
             ax.add_feature(cfeature.LAND, facecolor='0.75', zorder=0)
             gl = ax.gridlines(draw_labels=True)
-            gl.xlocator = mticker.FixedLocator([-180, -150, -120, -90, -60, -30, 0,
-                                                30, 60, 90, 120, 150, 180])
+            gl.xlocator = mticker.FixedLocator(np.arange(-180, 180, 15))
             gl.ylocator = mticker.FixedLocator(np.arange(-90, 91, 10))
             gl.xformatter = LongitudeFormatter()
             gl.yformatter = LatitudeFormatter()
-            gl.ylabel_style = {'size': 12, 'color': 'gray'}
-            gl.xlabel_style = {'size': 12, 'color': 'gray'}
+            gl.ylabel_style = {'size': 11, 'color': 'gray'}
+            gl.xlabel_style = {'size': 11, 'color': 'gray'}
             ax.set_global()
             global_extent = ax.get_extent(crs=ccrs.PlateCarree())
             ax.set_extent(global_extent[:2] + (-50, -90), crs=ccrs.PlateCarree())
@@ -89,34 +89,39 @@ class SWORD():
             self.ax = ax
 
         if proj_type == 'miller':
-            projection = ccrs.Miller()
+            self.projection = ccrs.Miller()
             #projection = ccrs.PlateCarree()
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
             self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
-            ax = self.fig.add_subplot(1, 1, 1, projection=projection)
+            ax = self.fig.add_subplot(1, 1, 1, projection=self.projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
-            ax.coastlines(resolution='50m', color='k', zorder=7)
+            ax.coastlines(resolution='50m', color='k', zorder=1)
             ax.add_feature(cfeature.LAND, facecolor='0.75', zorder=0)
             #ax.stock_img()
             gl = ax.gridlines(draw_labels=True)
-            gl.xlocator = mticker.FixedLocator([-180, -150, -120, -90, -60, -30, 0,
-                                                30, 60, 90, 120, 150, 180])
+            gl.xlocator = mticker.FixedLocator(np.arange(-180, 181, 15))
             gl.ylocator = mticker.FixedLocator(np.arange(-90, 91, 10))
             gl.xformatter = LongitudeFormatter()
             gl.yformatter = LatitudeFormatter()
-            gl.ylabel_style = {'size': 12, 'color': 'gray'}
-            gl.xlabel_style = {'size': 12, 'color': 'gray'}
+            gl.ylabel_style = {'size': 11, 'color': 'gray'}
+            gl.xlabel_style = {'size': 11, 'color': 'gray'}
             ax.set_global()
             self.ax = ax
 
         # увеличение конкретной области
-        if extend is not None:
-            self.extend = extend
-            self.ax.set_extent(extend, ccrs.PlateCarree())
-
-        else:
-            """no projection"""
+        if (extend is None and proj_type == 'miller') or proj_type == 'plot':
+            print('proj')
             self.extend = None
+        else:
+            if extend is None:
+                if proj_type == 'ortho_s':
+                    self.extend = [-179, 179, -47, -90]
+                elif proj_type == 'ortho_n':
+                    self.extend = [-179, 179, 47, 90]
+            else:
+                self.extend = extend
+            self.ax.set_extent(self.extend, self.transform)
+            self.ax.set_aspect('equal')
 
         #plt.gca().set_axis_off()
         """plt.subplots_adjust(top=1, bottom=0.025, right=1, left=0.025,
@@ -145,7 +150,7 @@ class SWORD():
         fig, axs = plt.subplots(ncols=1, nrows=len(draw_list), figsize=(15, 5*len(draw_list)),
                                 constrained_layout=True)
 
-        for i, sw_set in enumerate(draw_list):
+        for plot_num, sw_set in enumerate(draw_list):
             label, date_list, time_list, value, pos = sw_set
             """if short_set:
                 host = axs
@@ -154,57 +159,70 @@ class SWORD():
             if len(draw_list) == 1:
                 host = axs
             elif len(draw_list) > 1:
-                host = axs[i]
+                host = axs[plot_num]
+            #host.set_zorder(6)
             ax2 = host.twiny()
 
             #   main value plot
-            host.plot(np.arange(len(time_list)), value, c='r', label=label)
-            time_ticks = np.arange(len(value))
+            host.plot(np.arange(len(time_list)), value, c='k', label=label)
+            str_ticks = [decode_str_dt_param(date + 'T' + time).strftime('%H:%M:%S') for date, time in
+                         zip(date_list, time_list)]
+            date_ticks = np.array([[x, label] for x, label in zip(np.arange(len(time_list)), str_ticks)])
 
-            #   top coord pos labels
-            geocoord_labels = np.array([str(lat) + ' ' + str(lon) for lat, lon in np.round(pos[:, :2], 2)])
+            solarcoord_pos = []
+            for i in range(len(date_list)):
+                dt = decode_str_dt_param(date_list[i] + 'T' + time_list[i])
+                lon = pos[i, 1]
+                solar_lon = get_solar_coord(dt, lon)
+                solar_lat, solar_lon = sun_pos(dt)
+                # solar_lt = np.rint(solar_lon/15)
+                lt = get_local_time(dt, lon)
+                # solarcoord_pos.append('%sh %.1f'%(lt.hour, solar_lon))
+                solarcoord_pos.append('%s  %.1f' % (lt.strftime('%H:%M:%S'), 90. - solar_lat))
+            coord_pos = np.array(
+                [str(lat) + '  ' + str(lon) for lat, lon in np.round(np.array(pos[:, :2]).astype(float), 2)])
 
-            #   time ticks
-            magcoord_labels = np.array(
-                np.round(mag2mlt(geo2mag(pos, date_list, to_coord='GSM')[:, :2], date_list, time_list), 2)).astype(str)
-            # magcoord_labels = np.array(np.round(mag2mlt(pos[:, :2], date_list, time_list), 2)).astype(str)
-            MLT_labels = np.array([mlt for mlat, mlt in magcoord_labels]).astype(str)
-            magcoord_labels = np.array([mlat + ' ' + mlt for mlat, mlt in magcoord_labels]).astype(str)
-            time_labels = []
-            for mlt, time in zip(MLT_labels, time_list):
-                    time_labels.append('UTC: ' + str(time))
-                    time_labels.append('\n\nMLT: ' + str(mlt))
-            time_labels = np.array(time_labels).astype(str)
-            time_labels = np.array([''.join(x) for x in zip(time_labels[0::2], time_labels[1::2])])
+            # pos_ticks = np.array([[x, y_label] for x, y_label in zip(np.arange(len(time_list)), coord_pos)])
+            # magpos_ticks = np.array([[x, y_label] for x, y_label in zip(np.arange(len(time_list)), magcoord_pos)])
 
+            coord_ticks = []
+            for sol, geo in zip(solarcoord_pos, coord_pos):
+                coord_ticks.append(str(sol))
+                coord_ticks.append('\n\n' + str(geo))
+            coord_ticks = np.array(coord_ticks).astype(str)
+            coord_ticks = np.array([''.join(x) for x in zip(coord_ticks[0::2], coord_ticks[1::2])])
+            coordtick_locations = np.arange(len(pos))
 
-            # decode from str to datetime_full format
-            datetime_full = np.array([decode_str_dt_param(d + 'T' + t) for d, t in zip(date_list, time_list)], dtype='datetime64')
-            xaxis_label_total_num = 6
-            if len(time_ticks) >= xaxis_label_total_num:   # vertical grid lines
+            # decode from str to datetime format
+            points_time = np.array([decode_str_dt_param(d + 'T' + t) for d, t in zip(date_list, time_list)],
+                                   dtype='datetime64')
 
-                if datetime_full[-1]-datetime_full[0] <= np.timedelta64(1, 'h'):     # отрисовка vlines раз в минуту
-                    print('time range <= 1h')
-                    last_point = datetime_full[0]
+            if len(date_ticks) >= 12:
+                tick_count = 9
+                if points_time[-1] - points_time[0] < np.timedelta64(1, 'h'):  # отрисовка vlines раз в минуту
+                    coord_ticks_arange = np.arange(0, len(coord_ticks),
+                                                   int(len(coord_ticks) / tick_count))  # top xlabels tick
+                    last_point = points_time[0]
                     line_idx = []
-                    for k, point_time in enumerate(datetime_full):
-                        if datetime_full[-1] - datetime_full[0] > np.timedelta64(30, 'm'):
+                    for k, point_time in enumerate(points_time):
+                        if points_time[-1] - points_time[0] > np.timedelta64(30, 'm'):
                             minute_before = point_time - np.timedelta64(5, 'm')
                         else:
                             minute_before = point_time - np.timedelta64(1, 'm')
-                        if minute_before >= last_point:
+                        if minute_before == last_point:
                             last_point = point_time
                             line_idx.append(k)
-                    time_labels = time_labels[line_idx]
-                    time_ticks = time_ticks[line_idx]
-                    host.vlines(x=line_idx, ymin=np.min(value), ymax=np.max(value), color='b', linestyle='--', alpha=.5)
-                    x_ticks = line_idx  # top xlabels tick
+                    date_ticks = date_ticks[line_idx]
+                    nonnan_value = [x for x in value if not np.isnan(x)]
+                    host.vlines(x=line_idx, ymin=np.min(nonnan_value), ymax=np.max(nonnan_value), color='b',
+                                linestyle='--', alpha=.5, linewidths=1)
                 else:
-                    x_ticks = np.arange(0, len(geocoord_labels), int(len(geocoord_labels) / xaxis_label_total_num))  # top xlabels tick
-                    time_labels = time_labels[x_ticks]
-                    time_ticks = time_ticks[x_ticks]
+                    coord_ticks_arange = np.arange(0, len(coord_ticks),
+                                                   int(len(coord_ticks) / tick_count))  # top xlabels tick
+                    date_ticks = date_ticks[coord_ticks_arange]
+
             else:
-                x_ticks = np.arange(len(time_ticks))
+                coord_ticks_arange = np.arange(0, len(coord_ticks))
 
 
             right_axes = []
@@ -213,10 +231,13 @@ class SWORD():
             if len(auroral_list) > 0:
                 right_axes.append(host.twinx)
 
-
             if draw_station is not None:
                 ax3 = host.twinx()
+                ax3.set_zorder(host.get_zorder() + 1)
                 ax3.set_ylabel("%s ground ground_station, nT" % draw_station)
+                obs_loc = get_superMAG_observ_loc(draw_station)[:2]
+                p_in_p = get_position_near_point(pos, obs_loc[::-1], degr_radius=5)
+                p_in_p = [not elem for elem in p_in_p]
                 ch_str = label.split(' ')[1]
                 channels = ['n', 'e', 'c']
                 try:
@@ -230,12 +251,21 @@ class SWORD():
                         for chnl in [0, 1, 2]:     # n, e, c
                             obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=chnl, delta=delta, station=draw_station)
                             ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, channels[chnl]))
+                swarm_value_near_obs = value.copy()
+                swarm_value_near_obs[p_in_p] = np.nan
+
+                print(ax3.get_zorder(), 'zordser')
+                #host.scatter(np.arange(len(time_list))[p_in_p], value[p_in_p], c='g', marker='+', label=label+' near obs', zorder=8)
+                host.plot(np.arange(len(time_list)), swarm_value_near_obs, c='r',label=label+' near obs', zorder=ax3.get_zorder() + 1)
                 ax3.legend(loc=4)
+                ax3.grid(linestyle='--')
+                #ax3.set_zorder(host.get_zorder() - 1)
             # auroral oval
             if len(auroral_list) > 0:
+                print(len(auroral_list), 'i=', plot_num)
                 ax4 = host.twinx()
                 ax4.set_ylabel("OVATION auroral oval near %s, ergs/cm²" % label)
-                ax4.plot(np.arange(len(auroral_list[i])), auroral_list[i], c='b',
+                ax4.plot(np.arange(len(auroral_list[plot_num])), auroral_list[plot_num], c='b',
                          label='auroral oval near ' + label)
 
 
@@ -248,31 +278,29 @@ class SWORD():
                     ax4.spines["right"].set_visible(True)
                 ax4.legend(loc=4)
                 ax4.grid(linestyle='--')
+                ax4.set_zorder(host.get_zorder() + 1)
 
             if 'fac' in label:
-                label += ' nA/m²'
+                label += ' %sA/m²' % chr(956)
             else:
                 label += ' nT'
             host.set_ylabel(label)
-            host.set_xticks(time_ticks)
-            host.set_xticklabels(time_labels)
-            host.tick_params(axis='x', labelsize=11)
-            host.tick_params(axis='y', labelsize=11)
-
+            host.set_xticks(np.array(date_ticks[:, 0]).astype(int))
+            host.set_xticklabels(date_ticks[:, 1], rotation=40)
             ax2.set_xlim(host.get_xlim())
-            ax2.set_xticks(time_ticks)
-            ax2.set_xticklabels(geocoord_labels[time_ticks])
-            ax2.tick_params(axis='x', labelsize=11)
-            ax2.annotate("Lat Lon", xy=(-0.035, 1.037), xycoords=ax2.transAxes, size=11)
-
+            ax2.set_xticks(coordtick_locations[coord_ticks_arange])
+            ax2.set_xticklabels(coord_ticks[coord_ticks_arange])
+            ax2.tick_params(axis='x', labelsize=8)
+            ax2.annotate("LT sunColat\n\nGEO lat lon", xy=(-0.03, 1.037), xycoords=ax2.transAxes, size=8)
 
             #https://stackoverflow.com/questions/20532614/multiple-lines-of-x-tick-labels-in-matplotlib
-
             host.grid()
             host.xaxis.grid(False)
             ax2.grid()
             host.legend()
-        if draw_list[0][1][0] != draw_list[0][1][-1]:   # first date != second date
+
+
+        if draw_list[0][1][0] != draw_list[0][1][-1]:  # first date != second date
             dt_from, dt_to = decode_str_dt_param(draw_list[0][1][0] + 'T' + draw_list[0][2][0]), decode_str_dt_param(
                 draw_list[0][1][-1] + 'T' + draw_list[0][2][-1])
             fig.suptitle('from %s to %s' % (dt_from, dt_to), fontsize=16)
@@ -291,115 +319,153 @@ class SWORD():
         plt.grid(True)
 
     def draw_swarm_path(self, points, points_time=None):
-        x, y = points[:, 1], points[:, 0]
-        self.ax.plot(x, y,'k--',zorder=1,lw=1,alpha=0.4,transform=ccrs.Geodetic())
-        line_length = 1
+        ax_proj_xyz = self.ax.projection.transform_points(self.transform, points[:, 1], points[:, 0], points[:, 2] )
+        X, Y, Z = ax_proj_xyz[:, 0], ax_proj_xyz[:, 1], ax_proj_xyz[:, 1]
+        x_deg, y_deg = points[:, 1], points[:, 0]
+
+        # swarm path -----------------
+        if self.proj_type != 'miller':
+            self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4)
+
+        #self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=ccrs.Geodetic())
+
         if points_time is not None and len(points_time) > 0:
             print('draw vline')
             # decode from str to datetime format
             points_time = np.array(points_time, dtype='datetime64')
 
             last_point = points_time[0]
-            last_annotate_point = points_time[0]
             for k, point_time in enumerate(points_time):
                 minute_before = point_time - np.timedelta64(1, 'm')
-                five_minute_before = point_time - np.timedelta64(5, 'm')
-                #if minute_before == last_point or five_minute_before == last_annotate_point:
                 if minute_before >= last_point:
+                    # if minute_before == last_point:
                     try:
-                        x1, y1 = x[k], y[k]
-                        x2, y2 = x[k + 1], y[k + 1]
-                        # (x1, y1) + a(y2-y1, x1-x2)
-                        p1 = np.array((x1, y1))
-                        a1 = 1
-                        a2 = -1
-                        l1 = np.array([y2 - y1, x1 - x2])
-                        l1_length = np.sqrt(l1[0]**2+l1[1]**2)
-                        l1 = l1/l1_length
-                        l2 = np.array((a1 * l1[0], a1 * l1[1]))
-                        l3 = np.array((a2 * l1[0], a2 * l1[1]))
-                        c1 = p1 + l2
-                        c2 = p1 + l3
-                        line = Line2D([c1[0], x1, c2[0]],
-                                      [c1[1], y1, c2[1]], transform=ccrs.Geodetic())
-                        self.ax.add_line(line, )
-                        if self.extend is not None:
-                            if self.extend[0] < c1[0] < self.extend[1] and self.extend[2] < c1[1] < self.extend[3]:
-                                self.ax.text(c1[0], c1[1], str(point_time), fontsize=8, clip_on=True,
-                                             transform=ccrs.Geodetic())
+                        if k < len(X) - 1:
+                            x1, y1, z1 = X[k], Y[k], Z[k]
+                            x2, y2, z2 = X[k + 1], Y[k + 1], Z[k + 1]
+
                         else:
-                            self.ax.text(c1[0], c1[1], str(point_time), fontsize=8, clip_on=True,  transform=ccrs.Geodetic())
-
-
-
+                            x1, y1, z1 = X[k], Y[k], Z[k]
+                            x2, y2, z2 = X[k - 1], Y[k - 1], Z[k - 1]
+                        text = str(point_time) + '\nLT:%s' % get_local_time(point_time.astype(datetime.datetime),
+                                                                            points[k, 1])
+                        self.ax.arrow(x1, y1, (x2 - x1) * 7, (y2 - y1) * 7, head_width=0.75, head_length=0.25, zorder=5,
+                        #self.ax.arrow(x1, y1, (x2 - x1), (y2 - y1), head_width=0.75, head_length=0.25, zorder=5,
+                                      alpha=.65)
+                        """line = Line2D([c1[0], x1, c2[0]],
+                                      [c1[1], y1, c2[1]])
+                        self.ax.add_line(line, )"""
+                        if self.extend is not None:
+                            if self.extend[0] < x_deg[k] < self.extend[1] and self.extend[2] < y_deg[k] < self.extend[3]:
+                                self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5,
+                                             transform=self.ax.projection)
+                                # self.ax.annotate(text, xytext=(x2, y2), xy=(x1, y1), size=10, fontsize=12)
+                                pass
+                        else:
+                            self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
                     except Exception as e:
-                        pass
+                        print(e)
                     last_point = point_time
-                    last_annotate_point = point_time
 
-        """for i, xy in enumerate(points):
-            try:
-                pass
-                #self.ax.annotate(s='', xy=(xy[i + 1], xy[i + 1]), xytext=(xy[i], xy[i]), arrowprops=dict(arrowstyle='->'), transform=ccrs.PlateCarree())
-                #self.ax.annotate(s='', xy=(xy[i + 1], xy[i + 1]), xytext=(xy[i], xy[i]), transform=ccrs.PlateCarree())
-            except Exception as e:
-                pass"""
 
     def draw_swarm_scatter(self, points, values, custom_label=None, annotate=False):
+        values = np.array(values).astype(np.float).flatten()
+        X, Y, Z = points[:, 1], points[:, 0], points[:, 2]
         """отрисовка """
         # prepare colorbar, based on values
-        # 'n', 'e', 'c', fac, mu, Dd
         cb_type = 'zero_center'
-        cmap = plt.get_cmap('seismic')
-        if custom_label in ['Bn', 'Be', 'Bc']:
+        cmap = plt.get_cmap('jet')
+        if custom_label in ['N', 'E', 'C', 'F']:
             unit = 'SWARM ' + custom_label + ', nT'
         elif custom_label == 'FAC':
-            unit = 'SWARM FAC, nA/m²'
+            unit = 'SWARM FAC, %sA/m²' % chr(956)
         elif custom_label == 'mu':
             unit = 'DMA anomaly lvl'
             cb_type = 'DMA_anomaly'
             cmap = plt.get_cmap('RdYlBu')
-        elif "Dd" in custom_label:
-            if 'IGRF' in custom_label:
-                unit = '|SWARM-IGRF| $\\mathrm{d} B$ (nT)'
-            if 'CHAOS7' in custom_label:
-                unit = '|SWARM-CHAOS7| $\\mathrm{d} B$ (nT)'
+        elif 'IGRF' in custom_label:
+            unit = 'SWARM-IGRF $\\mathrm{d} %s$ (nT)' % str(custom_label).rsplit('_')[1][1]
+        elif 'CHAOS7' in custom_label:
+            unit = 'SWARM-CHAOS7 $\\mathrm{d} %s$ (nT)' % str(custom_label).rsplit('_')[1][1]
         else:
             unit = 'no unit'
 
 
         print('scatter max:%s scatter min:%s' % (np.max(values), np.min(values)), )
-
-
+        nonnan_values = np.array([x for x in values if not pd.isnull(x)])
         # draw scatter point, color based on values and legend
-        cmap_args = self.draw_colorbar(values=values, cmap=cmap, label=unit, cb_type=cb_type)
+        cmap_args = self.draw_colorbar(values=nonnan_values, cmap=cmap, label=unit, cb_type=cb_type)
+        m = cm.ScalarMappable(norm=cmap_args['norm'], cmap=cmap_args['cmap'])
+        if custom_label == 'FAC':
+            if self.proj_type == 'miller':
+                line_mp_lenght = 20
+            else:
+                line_mp_lenght = 1e6
+        elif 'd' in custom_label:
+            if self.proj_type == 'miller':
+                line_mp_lenght = 10
+            else:
+                line_mp_lenght = 1e5
+            #line_mp_lenght = 1e5
+            #line_mp_lenght = 1e3
+            #line_mp_lenght = 1e3
+        else:
+            if self.proj_type == 'miller':
+                line_mp_lenght = 3
+            else:
+                line_mp_lenght = 1e5
 
-        s = np.power(len(values), -1/16) * 300
-        self.ax.scatter(points[:, 1], points[:, 0], s=s, c=values, **cmap_args, transform=ccrs.PlateCarree(), edgecolors='k', lw=0.15)
-        #self.ax.scatter(points[:, 1], points[:, 0], c=values, cmap=cmap, norm=norm, transform=ccrs.PlateCarree())
+        value_max = np.max([x for x in values if not np.isnan(x)])
+        a_length = []
+        for k in range(len(X)):
+            if k < len(X) - 1:
+                x1, y1, z1 = X[k], Y[k], Z[k]
+                x2, y2, z2 = X[k + 1], Y[k + 1], Z[k + 1]
+            else:
+                x1, y1, z1 = X[k], Y[k], Z[k]
+                x2, y2, z2 = X[k - 1], Y[k - 1], Z[k - 1]
 
-        #str_values = np.format_float_positional(values, precision=3)
-        str_values =[str('%.2f' % x) for x in values]
-        #self.ax.text(points[:, 1], points[:, 0], str_values, )
-        #self.ax.scatter(points[:, 1], points[:, 0])
+            x1, y1, z1 = self.ax.projection.transform_points(self.transform, np.array([x1]), np.array([y1]), )[0]
+            x2, y2, z2 = self.ax.projection.transform_points(self.transform, np.array([x2]), np.array([y2]), )[0]
+            p1 = np.array((x1, y1))
+            a1 = values[k] / value_max * line_mp_lenght
+            a_length.append(a1)
+            a2 = -a1
+            l1 = np.array([y2 - y1, x1 - x2])
+            l1_length = np.sqrt(l1[0] ** 2 + l1[1] ** 2)
+            l1 = l1 / l1_length
 
+            l2 = np.array((a1 * l1[0], a1 * l1[1]))
+            l3 = np.array((a2 * l1[0], a2 * l1[1]))
+            c1 = p1 + l2
+            c2 = p1 + l3
+
+            line = Line2D([c1[0], x1, c2[0]],
+                          [c1[1], y1, c2[1]], color=m.to_rgba(values[k]), alpha=.75, zorder=4)
+            # [c1[1], y1, c2[1]], transform=transf, color='k', alpha=.9)
+            self.ax.add_line(line)
+        print('line length min:%s max:%s ' % (np.min(a_length), np.max(a_length)) )
+        # solar coords
         if annotate:
+            str_values = [str('%.2f' % x) for x in values]
             for i, txt in enumerate(str_values):
-                # self.ax.annotate(txt, (points[i, 1], points[i, 0]), transform=ccrs.PlateCarree())
+                # self.ax.annotate(txt, (points[i, 1], points[i, 0]), transform=self.transform)
                 if self.extend is not None:
-                    if self.extend[0] < points[i, 1] < self.extend[1] and self.extend[2] < points[i, 0] < self.extend[3]:
-                        self.ax.text(points[i, 1], points[i, 0], txt, transform=ccrs.PlateCarree(), fontsize=8)
+                    if self.extend[0] < points[i, 1] < self.extend[1] and self.extend[2] < points[i, 0] < self.extend[
+                        3]:
+                        self.ax.text(points[i, 1], points[i, 0], txt, transform=self.ax.projection, fontsize=8)
                 else:
-                    self.ax.text(points[i, 1], points[i, 0], txt, transform=ccrs.PlateCarree(), fontsize=8)
+                    self.ax.text(points[i, 1], points[i, 0], txt, transform=self.ax.projection, fontsize=8)
+
 
     def draw_ionomodel(self, surf_data, type=['north','seismic']):
         if type[1] =='sigh':
-            cmap = 'jet'
+            cmap = plt.get_cmap('jet')
             cb_type = 'zero_min'
             grid_method = 'linear'
             unit = ' Sm'
         else:
-            cmap = 'PiYG'
+            cmap = plt.get_cmap('PiYG')
             cb_type = 'zero_center'
             grid_method = 'nearest'
             if type[1] == 'pot':
@@ -408,17 +474,27 @@ class SWORD():
                 unit = ' μА/m²'
         x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
         # grid the data.
-        xi = np.linspace(x.min()-1, x.max()+1, 75)
-        yi = np.linspace(y.min(), y.max(), 75)
-        Vi = griddata((x, y), z, (xi[None, :], yi[:, None]), method=grid_method)  # create a uniform spaced grid
+        print(y.min(), y.max(), 'yyyy')
+        xi = np.linspace(0, 360.3, 75)
+        """if type[0] == 'northern':
+            yi = np.linspace(40.4, 89.59, 125)
+        else:
+            yi = np.linspace(-89.59, -40.4, 125)"""
+        #xi = np.linspace(x.min(), x.max() + 1, 100)
+        if y.max()<0:
+            yi = np.linspace(y.max(), -90., 75)
+        else:
+            yi = np.linspace(y.min(), 90., 75)
+
+        Vi = griddata((x, y), z, (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
         X, Y = np.meshgrid(xi, yi)
         print('Vi max', np.max(z))
         print('Vi min', np.min(z))
 
         lin = np.max(np.abs(z)) + (np.max(np.abs(z)) / 10)
 
-        cmap_args = self.draw_colorbar(z, cmap, 'ionomodel ' + str(type[0]) + unit, cb_type=cb_type)
-        self.ax.contourf(X, Y, Vi, **cmap_args, transform=ccrs.PlateCarree())
+        cmap_args = self.draw_colorbar(z, cmap, 'ionomodel %s ' % type[1] + str(type[0]) + unit, cb_type=cb_type)
+        self.ax.contourf(X, Y, Vi, cmap=cmap, norm=cmap_args['norm'], transform=ccrs.PlateCarree())
 
     def draw_avroral_oval(self, surf_data, hemisphere='north'):
         """x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
@@ -433,8 +509,14 @@ class SWORD():
 
 
         X, Y, flux_value = surf_data
+        #print(flux_value[np.isnan(flux_value)])
+        #nonnan_values = flux_value[not np.isnan(flux_value)]
+
         flux_value[np.isnan(flux_value)] = 0
-        cmap_args = self.draw_colorbar(flux_value, cmap='jet', label='auroral %s ergs/cm²' % hemisphere, cb_type='zero_min')
+        cmap_args = self.draw_colorbar(flux_value, cmap=plt.get_cmap('jet'), label='auroral %s ergs/cm²' % hemisphere, cb_type='zero_min')
+        #cmap.set_under('white', 0)
+
+        levels = np.linspace(0.25, 4, 20)
         #cmap_args = self.draw_colorbar(flux_value, cmap=aurora_cmap, label='auroral %s egrs/cm2s' % hemisphere, vmin=0.5, )
         """if hemisphere == 'north':
             rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=90)
@@ -442,7 +524,9 @@ class SWORD():
             rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=90)"""
             #rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=0)
         rotated_pole = ccrs.PlateCarree()
-        self.ax.contourf(X, Y, flux_value, **cmap_args, transform=rotated_pole, alpha=0.85)
+        #self.ax.contourf(X, Y, flux_value, **cmap_args, transform=rotated_pole, alpha=0.85)
+        self.ax.contourf(X, Y, flux_value, cmap=plt.get_cmap('jet'), levels=levels, transform=rotated_pole, alpha=0.85)
+        #self.ax.contourf(X, Y, flux_value, cmap=cmap, levels=levels, transform=rotated_pole, alpha=0.85)
 
 
     def draw_colorbar(self, values, cmap, label, cb_type='zero_center'):
@@ -469,8 +553,16 @@ class SWORD():
                 vmin, vmax = -1 * np.abs(values.min()), np.abs(values.min())
             else:
                 vmin, vmax = -1 * np.abs(values.max()), np.abs(values.max())
-            norm = plt.Normalize(vmin=vmin, vmax=vmax)
+            if ('FAC' in label) and vmax > 10:
+                bounds = [vmin, -5.0, -4., -3., -2., -1., 0, 1., 2., 3., 4., 5., vmax]
+            elif ('d' in label) and vmax > 50:
+                bounds = [vmin, -50.0, -40., -30., -20., -10., 0, 10., 20., 30., 40., 50., vmax]
+            else:
+                delta = vmax/5
+                bounds = [x for x in np.arange(vmin, vmax+delta, delta)]
+            norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
             cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            #cm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=-10, vmax=10))
             #cm = plt.cm.ScalarMappable(cmap=cmap)
             cmap_args = dict(cmap=cmap, norm=norm)
         elif cb_type == 'DMA_anomaly':
@@ -479,13 +571,31 @@ class SWORD():
             cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
             cmap_args = dict(cmap=cmap, norm=norm)
         elif cb_type == 'zero_min':
+            """
             cmap_edit = plt.get_cmap(cmap)
             cmap_edit.set_under('white', alpha="0")
-            # cmap_edit.set_under((1, 1, 1, 0))
-            #cm = plt.cm.ScalarMappable(cmap=cmap_edit, norm=plt.Normalize(vmin=0.75, vmax=values.max()))
             cm = plt.cm.ScalarMappable(cmap=cmap_edit, norm=plt.Normalize(vmin=0.25, vmax=np.max(values)))
-            #cmap_args = dict(cmap=cmap_edit, vmin=0.75, vmax=values.max())
-            cmap_args = dict(cmap=cmap_edit, vmin=0.25, vmax=np.max(values))
+            cmap_args = dict(cmap=cmap_edit, vmin=0.25, vmax=np.max(values))"""
+            #colors = [(0, 1, 0), (1, 0, 0)]
+            #lincm = LinearSegmentedColormap.from_list(
+            #    "Custom", colors, N=20)
+            cm = LinearSegmentedColormap.from_list(
+                'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=0.45, b=1.),
+                cmap(np.linspace(0.45, 1., 100)))
+            cm.set_under('white', 0)
+            norm = plt.Normalize(vmin=0, vmax=values.max())
+            cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            #cm.set_under('white', 0)
+            cmap_args = dict(cmap=cm, norm=norm)
+
+        else:
+            vmin, v_max = values.min(), values.max()
+            #vmin, v_max = values[np.where(values>vmin)].min(), values[np.where(values<v_max)].max()
+
+            norm = plt.Normalize(vmin=vmin, vmax=v_max)
+            cm = plt.cm.ScalarMappable(cmap='jet', norm=norm)
+            # cm = plt.cm.ScalarMappable(cmap=cmap)
+            cmap_args = dict(cmap='jet', norm=norm)
 
 
 
@@ -512,22 +622,20 @@ class SWORD():
             self.ax.plot(lon_lines[:, 1], lon_lines[:, 0], 'r:', zorder=1, lw=1, alpha=0.75,
                          transform=ccrs.Geodetic())
         for i, xy in enumerate(annotate_points):
-            if self.proj_type == 'ortho_n':
-                if xy[2][0] > 44:
-                    self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6,
-                                 color='r')
-            if self.proj_type == 'ortho_s':
-                if xy[2][0] < -29:
-                    self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6,
+            if self.extend is not None:
+                if self.extend[0] < xy[1] < self.extend[1] and self.extend[2] < xy[0] < self.extend[
+                    3]:
+                    self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=self.transform, fontsize=6,
                                  color='r')
             else:
-                self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=ccrs.PlateCarree(), fontsize=6, color='r')
+                self.ax.text(xy[1], xy[0], '%i,%i' % (xy[2][0], xy[2][1]), transform=self.transform, fontsize=6,
+                             color='r')
 
     def draw_vector(self, sw_pos, B):
         X, Y = sw_pos[:, 1], sw_pos[:, 0]
         #B = sw_value[:, :2]
-        u = 500
-        q = self.ax.quiver(X, Y, B[:, 0], B[:, 1], transform=ccrs.PlateCarree(), width=0.0008)
+        u = 50
+        q = self.ax.quiver(X, Y, B[:, 0], B[:, 1], transform=ccrs.PlateCarree(), width=0.0008, color='m', zorder=8, alpha=0.7)
         self.ax.quiverkey(q, X=0.7, Y=0.99, U=u, labelpos='E', label='{N, E} vector length = %s' % u, transform=ccrs.PlateCarree())
 
     def draw_shapefile(self, shapefile):
@@ -550,6 +658,31 @@ class SWORD():
                 #print(x)
                 self.ax.plot(x, y, transform=lccproj, zorder=1)
 
+    def fill_dark_side(self, datetime):
+        lat, lng = sun_pos(datetime)
+        pole_lng = lng
+        if lat > 0:
+            pole_lat = -90 + lat
+            central_rot_lng = 180
+        else:
+            pole_lat = 90 + lat
+            central_rot_lng = 0
+        rotated_pole = ccrs.RotatedPole(pole_latitude=pole_lat,
+                                        pole_longitude=pole_lng,
+                                        central_rotated_longitude=central_rot_lng)
+        x = np.empty(360)
+        y = np.empty(360)
+        x[:180] = -90
+        y[:180] = np.arange(-90, 90.)
+        x[180:] = 90
+        y[180:] = np.arange(90, -90., -1)
+        return x, y, rotated_pole
+
+    def draw_sun_terminator(self, swarm_date, swarm_time):
+        date_array = [decode_str_dt_param(d+'T'+t) for d, t in zip(swarm_date, swarm_time)]
+        date = date_array[int((len(date_array)-1)/2)]
+        x_term, y_term, rot_pol_term = self.fill_dark_side(date)
+        self.ax.fill(x_term, y_term, transform=rot_pol_term, zorder=1, color='k', alpha=0.25)
 
     def draw_point_with_annotate(self, pos, annotate):
         #   for intermag observ for example
@@ -557,8 +690,6 @@ class SWORD():
         x, y = float(pos[0]), float(pos[1])
         self.ax.scatter(x, y, c='r', marker='*', s=100, transform=ccrs.PlateCarree())
         self.ax.text(x, y, annotate, transform=ccrs.PlateCarree(), fontsize=10)
-
-
 
     def draw_polygon(self, poly):
         x, y = poly.exterior.xy

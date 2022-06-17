@@ -64,7 +64,7 @@ def get_image_page(request):
     'cut_obs_swarm_value': 'false', 'obs_code': 'undefined', 'deg_radius': '5', 'igrf_vector_diff': 'true', 
     'measure_mu': 'false', 'near_auroral_points': 'false'}
     """
-
+    #TODO изменить default delta и dt from to
 
     dt_from, dt_to = decode_str_dt_param(param_dict['from_date']), decode_str_dt_param(param_dict['to_date'])
     sm = copy.deepcopy(TeslaSwarm)
@@ -77,7 +77,11 @@ def get_image_page(request):
         sw_channel = 1
     elif param_dict['sw_channel'] == 'c':
         sw_channel = 2
+    elif param_dict['sw_channel'] == 'f':
+        #TODO add in html
+        sw_channel = 3
     elif param_dict['sw_channel'] == 'fac2':
+        #TODO fac2 to fac
         sw_channel = None
         fac_mod = True
     else:
@@ -85,12 +89,10 @@ def get_image_page(request):
 
     if not ('undefined' in str(param_dict['sw_delta'])):
         delta = int(param_dict['sw_delta'])
-        if delta >= 2:
-            sm.set_swarm_value_delta(delta)
-    else:
-        delta = 1
+        sm.set_swarm_value_delta(delta)
 
 
+    #TODO убрать анотации в html
     if param_dict['annotate_sw_value'] == 'true':
         annotate_sw_value_bool = True
     else:
@@ -164,7 +166,6 @@ def get_image_page(request):
         mag_grid = False
     sm.set_mag_grid_coord(b=mag_grid)
 
-    #TODO add file import
     #if param_dict['shape'] == 'true':
     sm.set_shape_file(file=None)
 
@@ -196,23 +197,23 @@ def get_image_page(request):
                     #swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
                     swarm_set = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
 
-                if param_dict['near_auroral_points'] == 'true':
-                    #include_data.append(sm.get_near_auroral_points_to_swarm(swarm_set=swarm_set))
-                    get_auroral = True
-                else:
-                    get_auroral = False
-                    #include_data.append(None)
+
                 if fac_mod:
                     labels.append('swarm-%s %s' % (swarm_set[0], 'fac'))
                 else:
-                    lbs = ['n', 'e', 'c']
+                    lbs = ['n', 'e', 'c', 'f']
                     labels.append('swarm-%s %s' % (swarm_set[0], lbs[sw_channel]))
                 swarm_sets.append(swarm_set)
 
                 if param_dict['supermag_obs'] != '-':
                     station = param_dict['supermag_obs']
 
-
+        if param_dict['near_auroral_points'] == 'true':
+            # include_data.append(sm.get_near_auroral_points_to_swarm(swarm_set=swarm_set))
+            get_auroral = True
+        else:
+            get_auroral = False
+            # include_data.append(None)
         print(bool_set, '=> plot sets:', len(swarm_sets), labels, 'include:', include_data, 'superMAG station:', station)
         (status, message) = sm.get_plotted_image(swarm_sets=swarm_sets, labels=labels, auroral=get_auroral,
                                                  sw_channel=sw_channel, delta=delta, station=station)

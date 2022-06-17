@@ -1,5 +1,5 @@
 import numpy as np
-from teslaswarm.settings import BASE_DIR, STATIC_OS_PATH, OBS_DATA_PATH
+from teslaswarm.settings import BASE_DIR, STATIC_OS_PATH, DATA_PATH
 from program_meas_py.meas_extr import get_measure_mu
 import math
 from numpy import degrees, radians
@@ -9,10 +9,9 @@ import subprocess
 import time
 from ovationpyme import ovation_prime, ovation_utilities
 from geospacepy import satplottools, special_datetime
-import pyIGRF
-from pyIGRF import calculate
+import igrf
 from tools.dt_foo import *
-from tools.supermag_api import SuperMAGGetData, sm_grabme
+from tools.supermag_api import SuperMAGGetData, sm_grabme, SuperMAGGetIndices
 from scipy.interpolate import griddata
 import shapely
 from shapely.geometry import Point
@@ -35,16 +34,18 @@ def data_reduction(respond, delta, fac2_mod=False):
     # vector, measure mu, fac, chaos = (Y, X, R), dt, (N, E, C)
     N, M = respond.shape
     if fac2_mod:
-        idx999 = np.where(respond[:, 4] == 999)[0]
+        idx999 = np.where(respond[:, 4] >= 999)[0]
         # respond = respond[idx999]
         respond[idx999, 4] = np.nan
         redu_resp = np.empty((0, 5))
     else:
         redu_resp = np.empty((0, M))
 
-    window = int(delta / 2)
-    if window == 0:
+    print(delta)
+    if delta <= 1:
         window = 1
+    else:
+        window = int(delta / 2)
     st_idx = 0
     while st_idx < N:
         if st_idx != 0:
@@ -69,10 +70,10 @@ def data_reduction(respond, delta, fac2_mod=False):
             redu_resp = np.append(redu_resp, [[dt, y, x, r, n, e, c, f]], axis=0)
         st_idx += delta
 
-    if fac2_mod:
+        """if fac2_mod:
         #https://pandas.pydata.org/docs/user_guide/missing_data.html
         redu_resp[:, 4] = pd.DataFrame(np.array(redu_resp[:, 4]), dtype='float32').interpolate().to_numpy().T[0]
-
+        """
 
         """
         miss_values_pd = pd.DataFrame(redu_resp[:, 4])
@@ -188,10 +189,10 @@ def get_mag_coordinate_system_lines(date, geomag_pole):
         if geomag_pole:
             #mag_lat_lines.append(apex_coord_system_convert(np.array(lat_lines)[:, :2], source_sys='geo', dest_sys='apex'))
             #mag_lat_lines.append(geo2geomag(np.array(lat_lines)[:, :2]))
-            mag_lat_lines.append(geo2mag(np.array(lat_lines), np.full((1, len(lat_lines)), date)[0], to_coord='MAG'))
+            mag_lat_lines.append(geo2GSM(np.array(lat_lines), np.full((1, len(lat_lines)), date)[0], to_coord='MAG'))
 
         else:
-            mag_lat_lines.append(geo2mag(np.array(lat_lines), np.full((1, len(lat_lines)), date)[0], to_coord='GSM'))
+            mag_lat_lines.append(geo2GSM(np.array(lat_lines), np.full((1, len(lat_lines)), date)[0], to_coord='GSM'))
 
 
     for lon_lines_start in np.arange(lon_coord[0], lon_coord[1], lon_step):
@@ -203,102 +204,59 @@ def get_mag_coordinate_system_lines(date, geomag_pole):
         if geomag_pole:
             #mag_lon_lines.append(apex_coord_system_convert(np.array(lon_lines)[:, :2], source_sys='geo', dest_sys='apex'))
             #mag_lat_lines.append(geo2geomag(np.array(lon_lines)[:, :2]))
-            mag_lon_lines.append(geo2mag(np.array(lon_lines), np.full((1, len(lon_lines)), date)[0], to_coord='MAG'))
+            mag_lon_lines.append(geo2GSM(np.array(lon_lines), np.full((1, len(lon_lines)), date)[0], to_coord='MAG'))
 
         else:
-            mag_lon_lines.append(geo2mag(np.array(lon_lines), np.full((1, len(lon_lines)), date)[0], to_coord='GSM'))
+            mag_lon_lines.append(geo2GSM(np.array(lon_lines), np.full((1, len(lon_lines)), date)[0], to_coord='GSM'))
 
     for lat in np.arange(-90+lat_step, 91-lat_step, lat_step):
         for lon in np.arange(-180, 181., lon_step):
             if geomag_pole:
-                ap = geo2mag(np.array([[lat, lon, r]]), np.full((1, 1), date)[0], to_coord='MAG')[0]
+                ap = geo2GSM(np.array([[lat, lon, r]]), np.full((1, 1), date)[0], to_coord='MAG')[0]
             else:
-                ap = geo2mag(np.array([[lat, lon, r]]), np.full((1, 1), date)[0], to_coord='GSM')[0]
+                ap = geo2GSM(np.array([[lat, lon, r]]), np.full((1, 1), date)[0], to_coord='GSM')[0]
 
             annotate_points.append([ap[0], ap[1], [lat, lon]])
     for lat in [-90, 90]:
         if geomag_pole:
-            ap = geo2mag(np.array([[lat, 0, r]]), np.full((1, 1), date)[0], to_coord='MAG')[0]
+            ap = geo2GSM(np.array([[lat, 0, r]]), np.full((1, 1), date)[0], to_coord='MAG')[0]
         else:
-            ap = geo2mag(np.array([[lat, 0, r]]), np.full((1, 1), date)[0], to_coord='GSM')[0]
+            ap = geo2GSM(np.array([[lat, 0, r]]), np.full((1, 1), date)[0], to_coord='GSM')[0]
         annotate_points.append([ap[0], ap[1], [lat, 0]])
 
 
 
     return mag_lat_lines, mag_lon_lines, annotate_points
 
+def get_igrf_value(date, coords):
+    """
+     Parameters
+     ----------
+
+     date: datetime.date or decimal year yyyy.dddd
+     glat, glon: geographic Latitude, Longitude
+     alt_km: altitude [km] above sea level for itype==1
+     isv: 0 for main geomagnetic field
+     itype: 1: altitude is above sea level
+     """
+    igrf_model = np.empty((0, 4))
+    for i in range(len(coords)):
+        glat, glon, alt_km = coords[i, 0], coords[i, 1], coords[i, 2]
+        alt_km = alt_km - earth_radius_in_meters(glat)/1000
+        model = igrf.igrf(date[i], glat, glon, alt_km)
+        igrf_model = np.append(igrf_model, [[float(model.north), float(model.east), float(model.down),
+                                             float(model.total)]], axis=0)
+    return igrf_model
+
 def swarm_egrf_vector_subtraction(swarm_pos, swarm_values_full, swarm_date):
-    #TODO igrf12 to 13
-    year = int(swarm_date[0].split("-")[0])
-    #switched_swarm_pos = convert_coord_system(swarm_pos[:, :2], dest_sys='apex')  # convert geo to mag coords
-    #switched_swarm_pos = geo2mag(swarm_pos, swarm_date, to_coord='GSM')
-    B = []
-    idx = 0
-    for n, e in swarm_values_full:
-        """  
-                d, i, h, x, y, z, f = calculate_magnetic_field_intensity(lon=switched_swarm_pos[idx, 1], lat=switched_swarm_pos[idx, 0], alt=switched_swarm_pos[idx, 2], date=date)
-                d, i, h, x, y, z, f = variation_of_magnetic_filed_intensity(lon=swarm_pos[idx, 1], lat=swarm_pos[idx, 0], alt=swarm_pos[idx, 2], date=date)
-                print('n:%s e:%s' % (n, e))
-                print('x:%s y:%s' % (x, y))
-                Bb = np.sqrt((n-x)**2+(e-y)**2)
-                Bb = np.sqrt((n-x)**2+(e-y)**2)
-                print('d:%s dx:%s dy%s' % (dd, dx, dy))
-                Bd = dd - d
-                print(dd, end='======\n')
-                b1, b2 = np.sqrt(n-x), np.sqrt(e-y)
-
-                """
-        d, i, h, x, y, z, f = igrf_value(lat=swarm_pos[idx, 0], lon=180.-swarm_pos[idx, 1],  alt=swarm_pos[idx, 2], year=year)
-        #d, i, h, x, y, z, f = igrf_value(lat=switched_swarm_pos[idx, 0], lon=switched_swarm_pos[idx, 1], alt=switched_swarm_pos[idx, 2], year=year)
-        #print('sw_n:%.2f sw_e:%.2f x:%.2f y:%.2f' % (n, e, x, y))
-        dd, dx, dy = magfield_variation(n, e, x, y)
-        B.append([dd, dx, dy])
-        idx += 1
-    return np.array(B)
-
-
-def igrf_value(lat, lon, alt=0., year=2005.):
-
-    FACT = 180. / np.pi
-    """
-    calculate.igrf12syn
-         This is a synthesis routine for the 12th generation IGRF as agreed
-         in December 2014 by IAGA Working Group V-MOD. It is valid 1900.0 to
-         2020.0 inclusive. Values for dates from 1945.0 to 2010.0 inclusive are
-         definitive, otherwise they are non-definitive.
-       INPUT
-         date  = year A.D. Must be greater than or equal to 1900.0 and
-                 less than or equal to 2025.0. Warning message is given
-                 for dates greater than 2020.0. Must be double precision.
-         itype = 1 if geodetic (spheroid)
-         itype = 2 if geocentric (sphere)
-         alt   = height in km above sea level if itype = 1
-               = distance from centre of Earth in km if itype = 2 (>3485 km)
-         lat = latitude (-90~90)
-         elong = east-longitude (0-360)
-         alt, colat and elong must be double precision.
-       OUTPUT
-         x     = north component (nT) if isv = 0, nT/year if isv = 1
-         y     = east component (nT) if isv = 0, nT/year if isv = 1
-         z     = vertical component (nT) if isv = 0, nT/year if isv = 1
-         f     = total intensity (nT) if isv = 0, rubbish if isv = 1
-         
-        """
-    x, y, z, f = calculate.igrf12syn(year, 2, alt, lat, lon)
-    d = FACT * np.arctan2(y, x)
-    h = np.sqrt(x * x + y * y)
-    i = FACT * np.arctan2(z, h)
-    """
-        :return
-             D is declination (+ve east)
-             I is inclination (+ve down)
-             H is horizontal intensity
-             X is north component
-             Y is east component
-             Z is vertical component (+ve down)
-             F is total intensity
-    """
-    return d, i, h, x, y, z, f
+    #swarm_pos[:, 2] = swarm_pos[:, 2]
+    igrf_value = get_igrf_value(swarm_date, swarm_pos)
+    sw_N, sw_E, sw_C, sw_F = swarm_values_full[:, 0], swarm_values_full[:, 1], swarm_values_full[:, 2], swarm_values_full[:, 3],
+    dN = sw_N - igrf_value[:, 0]
+    dE = sw_E - igrf_value[:, 1]
+    dC = sw_C - igrf_value[:, 2]
+    dF = sw_F - igrf_value[:, 3]
+    return np.array([dN, dE, dC, dF]).T
 
 def magfield_variation(n_swarm, e_swarm, x_igrf, y_igrf, ):
     """
@@ -338,14 +296,27 @@ def get_INTERMAGNET_observ_loc(codes):
     return [x, y, code]    # x y liter
     #return observ_raw  # x y liter
 
+def get_superMAG_observ_loc(code):
+    lat, lon = 0, 0
+    with open(DATA_PATH + 'supermag-stations.txt') as f:
+        for i, line in enumerate(f.readlines()):
+            if i > 43:
+                # IAGA	GEOLON	GEOLAT	AACGMLON	AACGMLAT	STATION-NAME		OPERATOR-NUM	OPERATORS
+                line = line.split()
+                if line[0] == code:
+                    lat = float(line[2])
+                    lon = (float(line[1]) + 180) % 360 - 180
+    return [lon, lat, code]
 
 def get_superMAG_value_from_web(date, station):
     #print(date, station)
     answer = SuperMAGGetData(logon='pilipenko',start='%sT00:00:00'%date, extent=86400,
                              station=station, flagstring='',)
-    #print(answer)
+    print(answer)
     station_data = []
     i, zero_time = 0, decode_str_dt_param(date + 'T' + '00:00:00')
+    #TODO geo or nez
+    #https://supermag.jhuapl.edu/mag/?fidelity=low&start=2017-01-01T00%3A00%3A00.000Z&interval=23%3A59&tab=api#pythonClientDocumentationSection
     for n, e, c in zip(sm_grabme(answer[1], 'N', 'geo'), sm_grabme(answer[1], 'E', 'geo'), sm_grabme(answer[1], 'Z', 'geo')):
         zero_time = zero_time + pd.Timedelta('%s minutes' % 1)
         station_data.append([zero_time, n, e, c])
@@ -503,6 +474,41 @@ def mera_mu(swarm_resp):
     return meas
 
 
+def cart_to_cartGeomag_coord(mag_xyz, phi, theta):
+    PHI_P, THETA_P = math.radians(phi), math.radians(-1*theta)
+
+    R = np.array([
+        [np.cos(PHI_P) * np.cos(THETA_P), -1 * np.sin(PHI_P), np.cos(PHI_P) * np.sin(THETA_P)],
+        [np.sin(PHI_P) * np.cos(THETA_P), np.cos(PHI_P), np.sin(PHI_P) * np.sin(THETA_P)],
+        [-1 * np.sin(THETA_P), 0, np.cos(THETA_P)]])
+
+    geo_data = np.empty((0, 3))
+    for xyz in mag_xyz:
+        geo_xyz = np.sum(np.array([np.deg2rad(xyz)]).T * R.T, axis=0)
+        geo_data = np.append(geo_data, [np.rad2deg(geo_xyz)], axis=0)
+    return geo_data
+
+def switch_coord_GEO_zeromodel_to_geomag(X, Y, magpol_theta, magpol_phi ):
+    PHI_POL, THETA_POL = math.radians(magpol_phi), math.radians(magpol_theta)
+    xy_mag = np.empty((0, 2))
+    for i, x in enumerate(X):
+        x, y = math.radians(x), math.radians(Y[i])
+        x_ = math.cos(x-THETA_POL) + np.sin(y-PHI_POL)
+        y_ = -math.sin(x-THETA_POL) + math.cos(y-PHI_POL)
+        xy_mag = np.append(xy_mag, [[np.rad2deg(x_), np.rad2deg(y_)]], axis=0)
+    return xy_mag
+
+def rotate_midnight_coord(lat, lon, lt):
+    def M(phi):
+        return np.array([[np.cos(phi), -np.sin(phi)],
+                         [np.sin(phi), np.cos(phi)]])
+    phi_0 = 2*np.pi * (24/24)
+    psi = np.pi/2 - np.deg2rad(lat)
+    phi = np.deg2rad(lon)
+
+    ans = np.matmul(M(phi_0), np.array([psi*np.cos(phi), psi*np.sin(phi)]).T)
+    return np.rad2deg(ans.T)
+
 
 def get_auroral_flux(dt, atype='diff', jtype='energy', hemishpere='N'):
     """
@@ -519,39 +525,50 @@ def get_auroral_flux(dt, atype='diff', jtype='energy', hemishpere='N'):
 
     print('get auroral oval from date: %s' % dt)
     estimator = ovation_prime.FluxEstimator(atype, jtype)
-    if hemishpere == 'N':
-        mlatgridN, mltgridN, fluxgridN = estimator.get_flux_for_time(dt, hemi='N')
-    else:
-        mlatgridS, mltgridS, fluxgridS = estimator.get_flux_for_time(dt, hemi='S')
-    if hemishpere == 'N':
-        PHI_P, THETA_P = 252.68, 80.65
-
-        #XN, YN = satplottools.latlt2cart(mlatgridN.flatten(), mltgridN.flatten(), 'N')
-        XN, YN = satplottools.latlt2cart(mlatgridN.flatten(), mltgridN.flatten(), 'N')
-        desc_mag = xyz_to_cast(XN, YN)
-        desc_geo = geo_to_mag_coord(desc_mag, PHI_P, THETA_P)
-        XN, YN = xyz_to_spher(desc_geo)
-    else:
-        PHI_P, THETA_P = 107.62, -80.37
-        #XS, YS = satplottools.latlt2cart(mlatgridS.flatten(), mltgridS.flatten(), 'S')
-        XS, YS = satplottools.latlt2cart(mlatgridS.flatten(), mltgridS.flatten(), 'S')
-        desc_mag = xyz_to_cast(XS, YS)
-        desc_geo = geo_to_mag_coord(desc_mag, PHI_P, THETA_P)
-        XS, YS = xyz_to_spher(desc_geo)
 
     if hemishpere == 'N':
-        xi = np.linspace(XN.min(), XN.max() + 1, 125)
-        yi = np.linspace(YN.min(), YN.max() + 1, 125)
-        value = griddata((XN, YN), fluxgridN.flatten(), (xi[None, :], yi[:, None]), method='linear')  # create a uniform spaced grid
-        XX, YY = np.meshgrid(xi, yi)
-        x_2d, y_2d, value_2d = XN, YN, fluxgridN.flatten()
+        THETA_P, PHI_P  = 213.00, 85.54
+        mlatgrid, mltgrid, fluxgrid = estimator.get_flux_for_time(dt, hemi='N')
 
     else:
-        xi = np.linspace(XS.min(), XS.max() + 1, 125)
-        yi = np.linspace(YS.min(), YS.max() + 1, 125)
-        value = griddata((XS, YS), fluxgridS.flatten(), (xi[None, :], yi[:, None]), method='linear')  # create a uniform spaced grid
-        XX, YY = np.meshgrid(xi, yi)
-        x_2d, y_2d, value_2d = XS, YS, fluxgridS.flatten()
+        THETA_P, PHI_P = 223., -64.24
+        mlatgrid, mltgrid, fluxgrid = estimator.get_flux_for_time(dt, hemi='S')
+
+    Y = mlatgrid.flatten()
+    X = mltgrid.flatten() / 24 * 360
+    XYmag = np.array([GEO2MAG(Y[i], X[i], dt) for i in range(len(X))])
+    Y = XYmag[:, 1]
+
+    midnight_lon = get_lon_from_LT(dt)
+    X = X - midnight_lon
+    for i in range(len(X)):
+        if X[i] < 0:
+            X[i] = 360 + X[i]
+        elif X[i] >= 360:
+            X[i] = X[i] - 360
+
+    Xmag, Ymag = X, Y
+
+    #XYmag = np.array([rotate_midnight_coord(lat=Y[i], lon=X[i], lt=mltgrid.flatten()[i]) for i in range(len(X))])
+    #Y, X = satplottools.latlt2cart(mlatgrid.flatten(), mltgrid.flatten(), hemishpere)
+    #desc_mag = [gc_latlon_to_xyz(lat=lat, lon=lon, R=6371) for lat, lon in zip(Y, X)]
+    #desc_mag = cart_to_cartGeomag_coord(desc_mag, THETA_P, PHI_P)
+    #Y, X = satplottools.latlt2polar(mlatgrid.flatten(), mltgrid.flatten(), hemishpere)
+
+
+    """X, Y = satplottools.latlt2cart(mlatgridS.flatten(), mltgridS.flatten(), 'S')
+    desc_mag = xyz_to_cast(X, Y)
+    desc_geo = cart_to_geomag_coord(desc_mag, PHI_P, THETA_P)
+    Xmag, Ymag = xyz_to_spher(desc_geo)"""
+
+    print(X.min(), X.max(), np.mean(X), 'X')
+    print(Y.min(), Y.max(), np.mean(Y), 'Y')
+    #xi = np.linspace(Xmag.min(), Xmag.max() + 1, 125)
+    xi = np.linspace(0, 360., 125)
+    yi = np.linspace(Ymag.min(), Ymag.max() + 1, 125)
+    value = griddata((Xmag, Ymag), fluxgrid.flatten(), (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
+    XX, YY = np.meshgrid(xi, yi)
+    x_2d, y_2d, value_2d = X, Y, fluxgrid.flatten()
 
     #   lat, lon, fluxgridN  north
     #   lat, lon, fluxgridS  south
@@ -573,26 +590,35 @@ def get_nearest_auroral_point_to_swarm(swarm_set):
     #   auroral без reshape
     estimator = ovation_prime.FluxEstimator('diff', 'energy')
     def get_auraral_xyz(datetime):
-        #middle_datetime = decode_dt_param( swarm_date[int((len(swarm_time) / 2))] + 'T' + swarm_time[int((len(swarm_time) / 2))])
+        midnight_lon = get_lon_from_LT(datetime)
         mlatgridN, mltgridN, fluxgridN = estimator.get_flux_for_time(datetime, hemi='N')
         mlatgridS, mltgridS, fluxgridS = estimator.get_flux_for_time(datetime, hemi='S')
-        XN, YN = satplottools.latlt2cart(mlatgridN.flatten(), mltgridN.flatten(), 'N')
-        desc_mag = xyz_to_cast(XN, YN)
-        desc_geo = geo_to_mag_coord(desc_mag, 252.68, 80.65)
-        XN, YN = xyz_to_spher(desc_geo)
+        YN = mlatgridN.flatten()
+        XN = mltgridN.flatten() / 24 * 360
+        YN = np.array([GEO2MAG(YN[i], XN[i], datetime) for i in range(len(XN))])[:, 1]
+        XN = XN - midnight_lon
+        for i in range(len(XN)):
+            if XN[i] < 0:
+                XN[i] = 360 + XN[i]
+            elif XN[i] >= 360:
+                XN[i] = XN[i] - 360
 
-        XS, YS = satplottools.latlt2cart(mlatgridS.flatten(), mltgridS.flatten(), 'S')
-        desc_mag = xyz_to_cast(XS, YS)
-        desc_geo = geo_to_mag_coord(desc_mag, 107.62, -80.37)
-        XS, YS = xyz_to_spher(desc_geo)
+        YS = mlatgridS.flatten()
+        XS = mltgridS.flatten() / 24 * 360
+        YS = np.array([GEO2MAG(YS[i], XS[i], datetime) for i in range(len(XS))])[:, 1]
+        XS = XS - midnight_lon
+        for i in range(len(XS)):
+            if XS[i] < 0:
+                XS[i] = 360 + XS[i]
+            elif XS[i] >= 360:
+                XS[i] = XS[i] - 360
 
         X = np.append(XN, XS)
+        X = (X + 180) % 360 - 180  # 0 360 to -180 180
         Y = np.append(YN, YS)
         XY = np.vstack((X, Y)).T
         Z = np.append(fluxgridN, fluxgridS)
         return XY, Z
-
-
 
     near_auroral_array = []
     zero_time = decode_str_dt_param(swarm_date[0] + 'T' + swarm_time[0])
@@ -604,7 +630,7 @@ def get_nearest_auroral_point_to_swarm(swarm_set):
             XY, Z = get_auraral_xyz(decode_str_dt_param(swarm_date[j] + 'T' + swarm_time[j]))
             zero_time = decode_str_dt_param(swarm_date[j] + 'T' + swarm_time[j])
         eucl = eucl_distance(pos, XY)
-        #print(eucl[np.argmin(eucl)])
+        print(eucl[np.argmin(eucl)], decode_str_dt_param(swarm_date[j] + 'T' + swarm_time[j]), pos[0], XY[j])
         if eucl[np.argmin(eucl)] < 5:
             near_auroral_array.append(Z[np.argmin(eucl)])
         else:
@@ -613,12 +639,11 @@ def get_nearest_auroral_point_to_swarm(swarm_set):
     return np.array(near_auroral_array)
 
 
-
 def open_superMAG_vcf(date):
 
     filename = date.split('-')
     filename = '%s%s%s' % (filename[0][2:], filename[1], filename[2])
-    with open(OBS_DATA_PATH+'%s.T47' % filename, mode='r') as vcf:
+    with open(DATA_PATH + '%s.T47' % filename, mode='r') as vcf:
         lines = vcf.readlines()
 
     station_data = []
@@ -704,30 +729,134 @@ def geocentric_latitude(lat):
 ############
 
 
-def geo2mag(sw_pos, swarm_date, to_coord='MAG'):
-    #input sw_pos format: lat, lon, rad
+def get_local_time(dt, lon):
+    UTtime_h, UTtime_m, UTtime_s = dt.hour, dt.minute, dt.second
+    #loct = np.rint(lon / 15) + UTtime_h + (UTtime_m / 60) + (UTtime_s / 3600)
+    loct = int(lon / 15) + UTtime_h + (UTtime_m / 60) + (UTtime_s / 3600)
+    if loct < 0:
+        loct = 24 + loct
+    if loct >= 24:
+        loct = loct - 24
+    local_time = datetime.datetime.strptime('%s %s' %
+                                                ('%i-%i-%i' % (dt.year, dt.month, dt.day),
+                                                 '%i:%i:%i' % (loct, UTtime_m, UTtime_s)),
+                                            '%Y-%m-%d %H:%M:%S')
+    local_time = local_time.time()
+    return local_time
 
-    # coordinate init_coords = [Z, Y, X] or [rad, lat, lon]
-    init_coords = np.array([sw_pos[:, 2] * 1000, sw_pos[:, 0], sw_pos[:, 1]]).T
+def get_lon_from_LT(dt):
+    """print('time:', dt.time())
+    lon_lt = (dt.hour*15)
+    try:
+        lon_lt += (dt.minute/60*15)
+    except:
+        print('minute is 0')
+    try:
+        lon_lt += (dt.second/60*15)
+    except:
+        print('second is 0')
+    #return 360-lon_lt
+    return -lon_lt
+    #return lon_lt
+    #return 2*np.pi *(dt.hour/1440)*360"""
+
+    seconds_per_day = 24 * 60 * 60.0
+    sec_since_midnight = (dt - datetime.datetime(dt.year, dt.month, dt.day)).seconds
+    lng = -(sec_since_midnight / seconds_per_day) * 360
+    #lng = (lng + 180) % 360 - 180  # 0 360 to -180 180
+    lng = (lng + 180) % 360 - 180  # 0 360 to -180 180
+
+    return lng
+
+def sun_pos(dt):
+    """This function computes a rough estimate of the coordinates for
+    the point on the surface of the Earth where the Sun is directly
+    overhead at the time dt. Precision is down to a few degrees. This
+    means that the equinoxes (when the sign of the latitude changes)
+    will be off by a few days.
+    The function is intended only for visualization. For more precise
+    calculations consider for example the PyEphem package.
+    Returns
+    -------
+        lat, lng: tuple of floats
+            Approximate coordinates of the point where the sun is
+            in zenith at the time dt.
+    """
+
+
+    axial_tilt = 23.4
+    ref_solstice = datetime.datetime(2016, 6, 21, 22, 22)
+    days_per_year = 365.2425
+    seconds_per_day = 24 * 60 * 60.0
+
+    days_since_ref = (dt - ref_solstice).total_seconds() / seconds_per_day
+    lat = axial_tilt * np.cos(2 * np.pi * days_since_ref / days_per_year)
+    #lat = axial_tilt * np.cos(2 * np.pi/ days_per_year)
+    sec_since_midnight = (dt - datetime.datetime(dt.year, dt.month, dt.day)).seconds
+    lng = -(sec_since_midnight / seconds_per_day - 0.5) * 360
+    return lat, lng
+
+def get_solar_coord(date, lon):
+    lon_to360 = lambda x: (x - 180) % 360 - 180  # -180 180 to 0 360
+    lon_to180 = lambda x: (x + 180) % 360 - 180  # 0 360 to -180 180
+    midnight_lon = get_lon_from_LT(date)
+    solar_coord_lon = lon_to360(lon) - midnight_lon
+    if solar_coord_lon < 0:
+        solar_coord_lon = 360 + solar_coord_lon
+    elif solar_coord_lon >= 360:
+        solar_coord_lon = solar_coord_lon - 360
+    return solar_coord_lon
+
+
+def earth_radius_in_meters(latitude_radians):
+    # latitudeRadians is geodetic, i.e. that reported by GPS.
+    # http:#en.wikipedia.org/wiki/Earth_radius
+    a = 6378137.0 # equatorial radius in meters
+    b = 6356752.3 # polar radius in meters
+    cos = math.cos(latitude_radians)
+    sin = math.sin(latitude_radians)
+    t1 = a * a * cos
+    t2 = b * b * sin
+    t3 = a * cos
+    t4 = b * sin
+    return math.sqrt((t1*t1 + t2*t2) / (t3*t3 + t4*t4))
+
+def GEO2MAG(lat, lon, dt):
+    cvals = coord.Coords([np.float(6371.0), np.float(lat), np.float(lon)], 'GEO', 'sph', ['Re', 'deg', 'deg'])
+    cvals.ticks = Ticktock(dt)
+    new_coord = np.array(cvals.convert('MAG', 'sph').data)[0]
+    return [new_coord[2], new_coord[1]]     # mag lon, lat
+
+def MAG2GEO(lat, lon, dt):
+    cvals = coord.Coords([np.float(6371.0), np.float(lat), np.float(lon)], 'MAG', 'sph', ['Re', 'deg', 'deg'])
+    cvals.ticks = Ticktock(dt)
+    new_coord = np.array(cvals.convert('GEO', 'sph').data)[0]
+    return [new_coord[2], new_coord[1]]     # mag lon, lat
+
+def geo2GSM(sw_pos, swarm_date, to_coord='MAG'):
+    # input sw_pos format: lat, lon, rad
+
+    # coordinate init_coords = [Z, Y, X] or [km from center of earth, lat, lon]
+    init_coords = np.array([sw_pos[:, 2], sw_pos[:, 0], sw_pos[:, 1]]).T
+    # alt above sea lvl to rad
+    for i, r in enumerate(init_coords[:, 0]):
+        earth_r = earth_radius_in_meters(init_coords[i, 1])
+        init_coords[i, 0] = (init_coords[i, 0] + earth_r) * 1000 / earth_r
     cvals = coord.Coords(init_coords, 'GEO', 'sph')
-
 
     dt_array = []
     for k, sw_date in enumerate(swarm_date):
-        dt_array.append(str(sw_date)+'T'+'00:00:00')
-    #print(dt_array)
-    cvals.ticks = Ticktock(dt_array, 'ISO')
+        dt_array.append(str(sw_date) + 'T' + '00:00:00')
+    # print(dt_array)
+    cvals.ticks = Ticktock(dt_array, 'UTC')
 
-    if to_coord == 'MAG':
-        # геомагнитные координаты
-        newcoord = np.array(cvals.convert('MAG', 'sph').data)  # return radius, latitude, longitude
+    newcoord = np.array(cvals.convert(to_coord, 'sph').data)  # return radius, latitude, longitude
 
-    elif to_coord == 'GSM':
-        # Geocentric Solar Magnetospheric
-        newcoord = np.array(cvals.convert('GSM', 'sph').data)  # return radius, latitude, longitude
-
-    #lan, lon, r
-    return np.array([newcoord[:, 1], newcoord[:, 2], newcoord[:, 0] / 1000]).T
+    for i, r in enumerate(newcoord[:, 0]):
+        earth_r = earth_radius_in_meters(init_coords[i, 1])
+        newcoord[i, 0] = newcoord[i, 0] * earth_r / 1000
+    # lan, lon, r
+    return np.array([newcoord[:, 1], newcoord[:, 2], newcoord[:, 0]]).T
 
 def mag2mlt(sw_pos, swarm_date, swarm_time):
     #   magnetic longitude to MLT
@@ -744,14 +873,14 @@ def mag2mlt(sw_pos, swarm_date, swarm_time):
     return np.array(convert_mlt)
 
 
-def geo2geomag(swarm_pos):
+def geo2geomag(latlon_coord, PHI, THETA):
     switched_swarm_pos = []
-    for lat, lon in swarm_pos:
-        lat_a, lon_a = geo2geomag_foo(lat, lon)
+    for lat, lon in latlon_coord:
+        lat_a, lon_a = geo2geomag_foo(lat, lon, PHI, THETA)
         switched_swarm_pos.append([lat_a, lon_a])
     return np.array(switched_swarm_pos)
 
-def geo2geomag_foo(glat: float, glon: float) :
+def geo2geomag_foo(glat: float, glon: float, PHI, THETA) :
     """
     Converts GEOGRAPHIC (latitude,longitude) to GEOMAGNETIC (latitude, longitude).
     Ground-level altitude
@@ -768,8 +897,9 @@ def geo2geomag_foo(glat: float, glon: float) :
 
     # longitude (in degrees east) of Earth's magnetic south pole
     # 2015
-    Dlong = 360 - (180 - 107.4)
-    Dlat = 80.4
+    #Dlong = 360 - (180 - 107.4)
+    Dlong = THETA
+    Dlat = PHI
 
     # 1995
     # Dlong=288.59
@@ -879,7 +1009,7 @@ def pol2cart(rho, phi):
 
 def to_cast(sph_x, sph_y):
     # geodetic_to_geocentric
-    r = 6370
+    r = 6371.2
     desc_data = np.empty((0, 3))
     for i in range(len(sph_x)):
         # az, el = sph_x[i] * math.pi / 180, sph_y[i] * math.pi / 180
@@ -902,27 +1032,22 @@ def to_spher(data):
         spher_data = np.append(spher_data, [[math.degrees(az), math.degrees(el)]], axis=0)
     return spher_data[:, 0], spher_data[:, 1]
 
+def cart_to_geo(data):
+    spher_data = np.empty((0, 2))
+    for x, y, z in data:
+        radius = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+        latitude = np.arcsin(z / radius)
+        longitude = np.arctan2(y, x)
+        spher_data = np.append(spher_data, [[math.degrees(latitude), math.degrees(longitude)]], axis=0)
+    return spher_data[:, 0], spher_data[:, 1]   # lat, lon
 
-def geo_to_mag_coord(mag_xyz, phi, theta):
-    PHI_P, THETA_P = math.radians(phi), math.radians(-1 * theta)
 
-    R = np.array([
-        [np.cos(PHI_P) * np.cos(THETA_P), -1 * np.sin(PHI_P), np.cos(PHI_P) * np.sin(THETA_P)],
-        [np.sin(PHI_P) * np.cos(THETA_P), np.cos(PHI_P), np.sin(PHI_P) * np.sin(THETA_P)],
-        [-1 * np.sin(THETA_P), 0, np.cos(THETA_P)]])
-
-    geo_data = np.empty((0, 3))
-    for xyz in mag_xyz:
-        geo_xyz = np.sum(np.array([xyz]).T * R.T, axis=0)
-        geo_data = np.append(geo_data, [geo_xyz], axis=0)
-    return geo_data
-
-def xyz_to_cast(sph_x, sph_y):
-    r = 6370
+def sph_to_cart(lon, lat):
+    r = 6371.2
     desc_data = np.empty((0, 3))
-    for i in range(len(sph_x)):
+    for i in range(len(lon)):
         # az, el = sph_x[i] * math.pi / 180, sph_y[i] * math.pi / 180
-        az, el = math.radians(sph_x[i]), math.radians(sph_y[i])
+        az, el = math.radians(lon[i]), math.radians(lat[i])     # lon, lat
         rcos_theta = r * np.cos(el)
         x = rcos_theta * np.cos(az)
         y = rcos_theta * np.sin(az)

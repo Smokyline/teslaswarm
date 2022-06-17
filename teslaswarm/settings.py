@@ -139,7 +139,7 @@ print('django.settings STATICFILES_DIRS', STATICFILES_DIRS)"""
 CHAOS_PATH = os.path.join(BASE_DIR, 'chaos7_model/data/CHAOS-7.mat')
 #CHAOS_PATH = os.path.join('C:\\Users\\ivan\\YandexDisk\\workspace\\py\\teslaswarm\\chaos7_model\\data\\CHAOS-7.mat')
 
-OBS_DATA_PATH = os.path.join(BASE_DIR, 'static/data/obs_data/SALU/')
+DATA_PATH = os.path.join(BASE_DIR, 'static/data/')
 
 ACTIVATE_THIS_PATH = "/home/ivan/anaconda3/bin/activate_this.py"
 print('django.settings ACTIVATE_THIS_PATH', ACTIVATE_THIS_PATH)
