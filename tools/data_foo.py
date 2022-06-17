@@ -315,9 +315,8 @@ def get_superMAG_value_from_web(date, station):
     print(answer)
     station_data = []
     i, zero_time = 0, decode_str_dt_param(date + 'T' + '00:00:00')
-    #TODO geo or nez
     #https://supermag.jhuapl.edu/mag/?fidelity=low&start=2017-01-01T00%3A00%3A00.000Z&interval=23%3A59&tab=api#pythonClientDocumentationSection
-    for n, e, c in zip(sm_grabme(answer[1], 'N', 'geo'), sm_grabme(answer[1], 'E', 'geo'), sm_grabme(answer[1], 'Z', 'geo')):
+    for n, e, c in zip(sm_grabme(answer[1], 'N', 'nez'), sm_grabme(answer[1], 'E', 'nez'), sm_grabme(answer[1], 'Z', 'nez')):
         zero_time = zero_time + pd.Timedelta('%s minutes' % 1)
         station_data.append([zero_time, n, e, c])
         i += 1

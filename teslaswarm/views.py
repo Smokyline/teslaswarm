@@ -99,6 +99,7 @@ def get_image_page(request):
         annotate_sw_value_bool = False
 
     if param_dict['proj_type'] != 'plot':
+        #TODO AC A&C fac etc
         if param_dict['sw_liter'] == 'AC':
             swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
             swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
@@ -191,13 +192,13 @@ def get_image_page(request):
                 elif i == 2:   # if A, B, C
                     swarm_set = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
                 elif i == 3:   # if A&C
-                    print('A&C fac')
-                    #swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                    #swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                    #swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
+                    # |A-C|
+                    swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
+                elif i == 4:
+                    # A&C
                     swarm_set = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
-
-
                 if fac_mod:
                     labels.append('swarm-%s %s' % (swarm_set[0], 'fac'))
                 else:
