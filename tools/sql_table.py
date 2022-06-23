@@ -39,7 +39,7 @@ def get_sql_response(swarm_type, from_date, to_date, fac2_mod=False):
         request = "SELECT date, latitude, longitude, radius, n, e, c, f FROM sat_sec_plain WHERE code='%s' " \
                   "AND date BETWEEN %s AND %s" % (
                       swarm_type, from_date, to_date)
-    print(request)
+    print('SQL REQUEST: ', request)
     cur = sql_connect.cursor()
     cur.execute(request)
     respond = cur.fetchall()
@@ -89,9 +89,8 @@ def get_swarm_set(swarm_liter, date_from, date_to, delta, fac2_mod=False):
         swarm_values = np.empty((len(swarm_date), 0))
         for v in [N, E, C, F]:
             swarm_values = np.append(swarm_values, np.array([v]).T, axis=1)
-
     if swarm_liter == '_':
-        swarm_liter = 'A&C'
+        swarm_liter = 'AC'
     print('-------------------------------------------------------------------------------------')
     print('The SWORD render will use data from swarm-%s, datetime from %s to %s' % (
     swarm_liter, swarm_date[0] + ' ' + swarm_time[0],

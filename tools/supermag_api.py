@@ -354,7 +354,7 @@ def sm_grabme(dataf,key,subkey):
 # we return as List (of dictionaries) or DataFrame
 
 def sm_microtest(choice,userid):
-  # 3 simple unit tests to verify the core fetches work
+  # 3 simple unit testing to verify the core fetches work
   import matplotlib.pyplot as plt
 
   start=[2019,11,15,10,40,00] # alt: start='2019-11-15T10:40'
@@ -488,7 +488,7 @@ def supermag_testing(userid):
   # the above methods are extensible to any number of variables, just update the (0,1,2) to reflect now many you have
   
 
-#  Uncomment to run quick sample tests
+#  Uncomment to run quick sample testing
 #userid='pilipenko'
 #sm_microtest(1,userid)   # sample stations fetch
 #sm_microtest(2,userid)   # sample data fetch, with plotting

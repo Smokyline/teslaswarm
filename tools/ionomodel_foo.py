@@ -1,11 +1,14 @@
+import datetime
+
 import numpy as np
 import subprocess
 import time
 from teslaswarm.settings import BASE_DIR
-from tools.data_foo import MAG2GEO, cart_to_cartGeomag_coord, sph_to_cart, cart_to_geo, get_lon_from_LT
+from tools.data_foo import *
 import platform
-
-
+import math
+from spacepy import coordinates as coord
+from spacepy.time import Ticktock
 def write_param(param_dict):
     keys = ['bz', 'by', 'doy', 'kp', 'f107', 'ut']
     format_param = [' Bz=    v', ' By=    v', ' DOY=    v', ' Kp=    v', ' F107=  v', ' UT=    v']
@@ -51,6 +54,61 @@ def array_to_string(xyz):
         str_array += s
     return str_array
 
+
+def to_cast(sph_x, sph_y):
+    r = 6371000
+    desc_data = np.empty((0, 3))
+    for i in range(len(sph_x)):
+
+        theta, phi = math.radians(sph_x[i]), math.radians(sph_y[i])
+        x = r * np.sin(phi) * np.cos(theta)
+        y = r * np.sin(phi) * np.sin(theta)
+        z = r * np.cos(phi)
+        desc_data = np.append(desc_data, [[x, y, z]], axis=0)
+    return desc_data
+
+
+"""def to_spher(data):
+    spher_data = np.empty((0, 2))
+    for x, y, z in data:
+        hxy = np.hypot(x, y)
+        # r = np.hypot(hxy, z)
+        el = np.arctan2(z, hxy)
+        az = np.arctan2(y, x)
+        spher_data = np.append(spher_data, [[math.degrees(az), math.degrees(el)]], axis=0)
+    return spher_data[:, 0], spher_data[:, 1]"""
+
+
+def to_spher(data):
+    spher_data = np.empty((0, 2))
+    for x, y, z in data:
+        radius = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+        latitude = np.arcsin(z / radius)
+        longitude = np.arctan2(y, x)
+        spher_data = np.append(spher_data, [[math.degrees(latitude), math.degrees(longitude)]], axis=0)
+    return spher_data[:, 0], spher_data[:, 1]   # lat, lon
+
+def mag_coord_to_geo(mag_xyz, phi, theta):
+    PHI_P, THETA_P = math.radians(phi), math.radians(theta)
+
+    R = np.array([
+        [np.cos(PHI_P) * np.cos(THETA_P), -1 * np.sin(PHI_P), np.cos(PHI_P) * np.sin(THETA_P)],
+        [np.sin(PHI_P) * np.cos(THETA_P), np.cos(PHI_P), np.sin(PHI_P) * np.sin(THETA_P)],
+        [-1 * np.sin(THETA_P), 0, np.cos(THETA_P)]])
+
+    geo_data = np.empty((0, 3))
+    for xyz in mag_xyz:
+        geo_xyz = np.sum(np.array([xyz]).T * R.T, axis=0)
+        geo_data = np.append(geo_data, [geo_xyz], axis=0)
+    return geo_data
+
+def mag_crt_to_geo_shp(r, lat, lon, dt):
+    cvals = coord.Coords([np.float(r), np.float(lat), np.float(lon)], 'MAG', 'car', ['Re', 'deg', 'deg'])
+    cvals.ticks = Ticktock(dt)
+    new_coord = np.array(cvals.convert('GEO', 'sph').data)[0]
+    return [new_coord[2], new_coord[1]]  # mag lon, lat
+
+
 def get_ionomodel_surf_file(param_dict, dt):
     # https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2005JA011465
     write_param(param_dict)     # dict to file
@@ -64,14 +122,9 @@ def get_ionomodel_surf_file(param_dict, dt):
     xyz_array = np.empty((0, 3))
     for line in file.readlines():
         xyz_array = np.append(xyz_array, [np.array(line.split()).astype(float)], axis=0)
-    mglat = xyz_array[:, 0]
-    mglon = xyz_array[:, 1]
-    Z = xyz_array[:, 2]
-
-
-    #GEO_latlon = np.array([MAG2GEO(geolat[i], geolon[i], dt) for i in range(len(geolat))])
-    #lat = GEO_latlon[:, 1]
-    #lon = GEO_latlon[:, 0]
+    x = xyz_array[:, 0]
+    y = xyz_array[:, 1]
+    value = xyz_array[:, 2]
 
     if file_name[0] == 'n':
         THETA_P, PHI_P  = 213.00, 85.54
@@ -80,22 +133,24 @@ def get_ionomodel_surf_file(param_dict, dt):
     lon_to360 = lambda x: (x - 180) % 360 - 180  # -180 180 to 0 360
     lon_to180 = lambda x: (x + 180) % 360 - 180  # 0 360 to -180 180
 
-    desc_mag = sph_to_cart(mglon, mglat)
-    desc_mag = cart_to_cartGeomag_coord(desc_mag, THETA_P, PHI_P)
-    lat, lon = cart_to_geo(desc_mag)
+    pollonlat = np.array([cart2polar(x, y) for x, y in zip(x, y)])
+    lat, lon = pollonlat[:, 0], pollonlat[:, 1]
+    lat = 90. - lat
+    geo_latlon = geomag2geo(latlon=np.array([lat, lon]).T, THETA=THETA_P, PHI=PHI_P)
+    lat, lon = geo_latlon[:, 0], geo_latlon[:, 1]
 
-    seconds_per_day = 24 * 60 * 60.0
-    ut_sec = float(param_dict['ut'])*(60 * 60.0)
-    midnight_lon = (ut_sec / seconds_per_day) * 360
+    #seconds_per_day = 24 * 60 * 60.0
+    #ut_sec = float(param_dict['ut'])*(60 * 60.0)
+    ut_h = int(float(param_dict['ut']))
+    ut_m = int((float(param_dict['ut'])%ut_h)*60)
+    dt_model = datetime.datetime(dt.year, dt.month, dt.day, ut_h, ut_m)
+    midnight_lat, midnight_lon = sun_pos(dt_model)
+
     print(midnight_lon, 'midn lon')
-    lon = lon_to360(lon) + midnight_lon
+    lon = midnight_lon + lon_to360(lon)
     for i in range(len(lon)):
         if lon[i] < 0:
             lon[i] = 360 + lon[i]
         elif lon[i] > 360:
             lon[i] = lon[i] - 360
-    #lon = lon_to180(lon)
-    print(lon.min(), lon.max(), np.mean(lon), 'X')
-    print(lat.min(), lat.max(), np.mean(lat), 'Y')
-    # print('\nMEAN: %s\n--------------' % np.mean(Z))
-    return np.array([lon, lat, Z]).T
+    return np.array([lon, lat, value]).T

@@ -78,7 +78,12 @@ class CHAOS7():
         dE = sat_E - B_phi
         dC = sat_C - B_radius
         dF = sat_F - F_chaos
-        B_diff = np.array([dN, dE, dC, dF]).T
+
+        sat_H = np.sqrt(sat_F ** 2 - sat_C ** 2)
+        model_H = np.sqrt(F_chaos ** 2 - B_radius ** 2)
+        dH = sat_H - model_H
+
+        B_diff = np.array([dN, dE, dC, dH]).T
         return B_diff
         # compute field strength and plot together with data
         #F = np.sqrt(B_radius ** 2 + B_theta ** 2 + B_phi ** 2)

@@ -5,6 +5,6 @@ from tools.supermag_api import SuperMAGGetIndices, supermag_testing, SuperMAGGet
 
 
 #supermag_testing('pilipenko')
-(status,mydata1b) = SuperMAGGetData('pilipenko','2019-11-15T10:40',3600,'all','HBK',FORMAT='list')
+(status,mydata1b) = SuperMAGGetData('pilipenko','2017-09-18T02:30',3600,'all','T47',FORMAT='list')
 print(status)
 print(mydata1b)

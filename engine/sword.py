@@ -10,7 +10,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import matplotlib.cm as cm
-
+import matplotlib.colors as mcolors
 import cartopy
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
@@ -48,7 +48,7 @@ class SWORD():
         if proj_type == 'ortho_n':
             self.projection = ccrs.Orthographic(central_latitude=90., central_longitude=0)
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
-            self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
+            self.fig = plt.figure(figsize=(15, 15))  # a*dpi x b*dpi aka 3000px x 3000px
             ax = self.fig.add_subplot(1, 1, 1, projection=self.projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
             ax.coastlines(resolution='110m', color='k', zorder=1)
@@ -70,7 +70,7 @@ class SWORD():
         if proj_type == 'ortho_s':
             self.projection = ccrs.Orthographic(central_latitude=-90., central_longitude=0)
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
-            self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
+            self.fig = plt.figure(figsize=(15, 15))  # a*dpi x b*dpi aka 3000px x 3000px
             ax = self.fig.add_subplot(1, 1, 1, projection=self.projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
             ax.coastlines(resolution='110m', color='k', zorder=1)
@@ -92,7 +92,7 @@ class SWORD():
             self.projection = ccrs.Miller()
             #projection = ccrs.PlateCarree()
             # projection = ccrs.NorthPolarStereo(central_longitude=0)
-            self.fig = plt.figure(figsize=(20, 20))  # a*dpi x b*dpi aka 3000px x 3000px
+            self.fig = plt.figure(figsize=(15, 15))  # a*dpi x b*dpi aka 3000px x 3000px
             ax = self.fig.add_subplot(1, 1, 1, projection=self.projection)
             ax.set_facecolor((1.0, 1.0, 1.0))
             ax.coastlines(resolution='50m', color='k', zorder=1)
@@ -232,29 +232,23 @@ class SWORD():
                 right_axes.append(host.twinx)
 
             if draw_station is not None:
+                station_name = [k for k in draw_station.keys()][0]
+                obs_value = draw_station[station_name]
                 ax3 = host.twinx()
                 ax3.set_zorder(host.get_zorder() + 1)
-                ax3.set_ylabel("%s ground ground_station, nT" % draw_station)
-                obs_loc = get_superMAG_observ_loc(draw_station)[:2]
-                p_in_p = get_position_near_point(pos, obs_loc[::-1], degr_radius=5)
-                p_in_p = [not elem for elem in p_in_p]
-                ch_str = label.split(' ')[1]
-                channels = ['n', 'e', 'c']
-                try:
-                    ch_where_nec = channels.index(ch_str)
-                    obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=ch_where_nec, delta=delta, station=draw_station)
-                    ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, ch_str))
+                ax3.set_ylabel("%s ground ground_station, nT" % station_name)
 
-                except Exception as e:
-                    print('superMAG Exception:', e)
-                    if ch_str == '':
-                        for chnl in [0, 1, 2]:     # n, e, c
-                            obs_value = get_sMAGstation_value_by_time(date_list, time_list, channel=chnl, delta=delta, station=draw_station)
-                            ax3.plot(np.arange(len(obs_value)), obs_value, label='%s %s' % (draw_station, channels[chnl]))
+
+                for col, vect_comp in enumerate(['N', 'E', 'Z', 'F']):
+                    ax3.plot(np.arange(len(obs_value)), obs_value[:, col], label='%s %s, nT' % (station_name, vect_comp))
+
+                obs_loc = get_superMAG_observ_loc(station_name)[:2]
+                p_in_p = get_position_near_point(pos, obs_loc[::-1], degr_radius=10)
+                p_in_p = [not elem for elem in p_in_p]
                 swarm_value_near_obs = value.copy()
                 swarm_value_near_obs[p_in_p] = np.nan
 
-                print(ax3.get_zorder(), 'zordser')
+                #print(ax3.get_zorder(), 'zordser')
                 #host.scatter(np.arange(len(time_list))[p_in_p], value[p_in_p], c='g', marker='+', label=label+' near obs', zorder=8)
                 host.plot(np.arange(len(time_list)), swarm_value_near_obs, c='r',label=label+' near obs', zorder=ax3.get_zorder() + 1)
                 ax3.legend(loc=4)
@@ -370,33 +364,41 @@ class SWORD():
 
     def draw_swarm_scatter(self, points, values, custom_label=None, annotate=False):
         values = np.array(values).astype(np.float).flatten()
+        print(custom_label, 'custom label')
         X, Y, Z = points[:, 1], points[:, 0], points[:, 2]
         """отрисовка """
         # prepare colorbar, based on values
         cb_type = 'zero_center'
+        unit = 'no unit'
         cmap = plt.get_cmap('jet')
-        if custom_label in ['N', 'E', 'C', 'F']:
-            unit = 'SWARM ' + custom_label + ', nT'
-        elif custom_label == 'FAC':
-            unit = 'SWARM FAC, %sA/m²' % chr(956)
-        elif custom_label == 'mu':
-            unit = 'DMA anomaly lvl'
+        if str(custom_label).rsplit(' ')[1] in ['N', 'E', 'C', 'F']:
+            unit = 'SWARM-' + custom_label + ', nT'
+            cb_type = 'vmin_vmax'
+        if '|AC|' in custom_label:
+            cb_type = 'zero_min'
+        if 'FAC' in custom_label:
+            unit = 'SWARM-%s, %sA/m²' % (custom_label, chr(956))
+        if 'IGRF' in custom_label:
+            unit = custom_label + ' (nT)'
+        if 'CHAOS7' in custom_label:
+            unit = custom_label + ' (nT)'
+        if 'mu' in custom_label:
+            unit = custom_label + ' DMA anomaly lvl'
             cb_type = 'DMA_anomaly'
-            cmap = plt.get_cmap('RdYlBu')
-        elif 'IGRF' in custom_label:
-            unit = 'SWARM-IGRF $\\mathrm{d} %s$ (nT)' % str(custom_label).rsplit('_')[1][1]
-        elif 'CHAOS7' in custom_label:
-            unit = 'SWARM-CHAOS7 $\\mathrm{d} %s$ (nT)' % str(custom_label).rsplit('_')[1][1]
-        else:
-            unit = 'no unit'
+            #cmap = plt.get_cmap('RdYlBu')
+            c = mcolors.ColorConverter().to_rgb
+            cmap = mpl.colors.ListedColormap([c('#1F2FFF'), c('#00FF4E'), c('#FFCD0D'), c('#FF1C19')])
+
 
 
         print('scatter max:%s scatter min:%s' % (np.max(values), np.min(values)), )
         nonnan_values = np.array([x for x in values if not pd.isnull(x)])
+        levels = [np.min(nonnan_values), -100.0, -75., -50., -25., 0, 25., 50., 75., 100., np.max(nonnan_values)]
         # draw scatter point, color based on values and legend
         cmap_args = self.draw_colorbar(values=nonnan_values, cmap=cmap, label=unit, cb_type=cb_type)
         m = cm.ScalarMappable(norm=cmap_args['norm'], cmap=cmap_args['cmap'])
-        if custom_label == 'FAC':
+        m.set_array(levels)
+        if 'FAC' in custom_label:
             if self.proj_type == 'miller':
                 line_mp_lenght = 20
             else:
@@ -405,17 +407,19 @@ class SWORD():
             if self.proj_type == 'miller':
                 line_mp_lenght = 10
             else:
-                line_mp_lenght = 1e5
-            #line_mp_lenght = 1e5
-            #line_mp_lenght = 1e3
-            #line_mp_lenght = 1e3
+                line_mp_lenght = 75e4
         else:
             if self.proj_type == 'miller':
                 line_mp_lenght = 3
             else:
                 line_mp_lenght = 1e5
 
-        value_max = np.max([x for x in values if not np.isnan(x)])
+        if self.proj_type == 'miller':
+            line_mp_lenght_max = 1500
+        else:
+            line_mp_lenght_max = 750000
+
+        value_max = np.nanmax(values)
         a_length = []
         for k in range(len(X)):
             if k < len(X) - 1:
@@ -437,11 +441,14 @@ class SWORD():
 
             l2 = np.array((a1 * l1[0], a1 * l1[1]))
             l3 = np.array((a2 * l1[0], a2 * l1[1]))
+            l2[np.where(l2>line_mp_lenght_max)] = line_mp_lenght_max
+            l3[np.where(l3<-line_mp_lenght_max)] = -line_mp_lenght_max
+
             c1 = p1 + l2
             c2 = p1 + l3
 
             line = Line2D([c1[0], x1, c2[0]],
-                          [c1[1], y1, c2[1]], color=m.to_rgba(values[k]), alpha=.75, zorder=4)
+                          [c1[1], y1, c2[1]], color=m.to_rgba(values[k]), alpha=.7, zorder=4)
             # [c1[1], y1, c2[1]], transform=transf, color='k', alpha=.9)
             self.ax.add_line(line)
         print('line length min:%s max:%s ' % (np.min(a_length), np.max(a_length)) )
@@ -451,8 +458,8 @@ class SWORD():
             for i, txt in enumerate(str_values):
                 # self.ax.annotate(txt, (points[i, 1], points[i, 0]), transform=self.transform)
                 if self.extend is not None:
-                    if self.extend[0] < points[i, 1] < self.extend[1] and self.extend[2] < points[i, 0] < self.extend[
-                        3]:
+                    if self.extend[0] < points[i, 1] < self.extend[1] and\
+                            self.extend[2] < points[i, 0] < self.extend[3]:
                         self.ax.text(points[i, 1], points[i, 0], txt, transform=self.ax.projection, fontsize=8)
                 else:
                     self.ax.text(points[i, 1], points[i, 0], txt, transform=self.ax.projection, fontsize=8)
@@ -460,22 +467,25 @@ class SWORD():
 
     def draw_ionomodel(self, surf_data, type=['north','seismic']):
         if type[1] =='sigh':
-            cmap = plt.get_cmap('jet')
+            cmap = plt.get_cmap('plasma')
             cb_type = 'zero_min'
             grid_method = 'linear'
             unit = ' Sm'
         else:
-            cmap = plt.get_cmap('PiYG')
+            #cmap = plt.get_cmap('PiYG')
+            cmap = plt.get_cmap('coolwarm')
             cb_type = 'zero_center'
             grid_method = 'nearest'
             if type[1] == 'pot':
                 unit = ' kV'
+                type[1] = 'potential'
             else:
                 unit = ' μА/m²'
         x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
         # grid the data.
         print(y.min(), y.max(), 'yyyy')
-        xi = np.linspace(0, 360.3, 75)
+        print(x.min(), x.max(), 'xxx')
+        xi = np.linspace(0, 360.3, 100)
         """if type[0] == 'northern':
             yi = np.linspace(40.4, 89.59, 125)
         else:
@@ -485,6 +495,7 @@ class SWORD():
             yi = np.linspace(y.max(), -90., 75)
         else:
             yi = np.linspace(y.min(), 90., 75)
+        yi = np.linspace(y.min(), y.max(), 100)
 
         Vi = griddata((x, y), z, (xi[None, :], yi[:, None]), method='nearest')  # create a uniform spaced grid
         X, Y = np.meshgrid(xi, yi)
@@ -493,7 +504,7 @@ class SWORD():
 
         lin = np.max(np.abs(z)) + (np.max(np.abs(z)) / 10)
 
-        cmap_args = self.draw_colorbar(z, cmap, 'ionomodel %s ' % type[1] + str(type[0]) + unit, cb_type=cb_type)
+        cmap_args = self.draw_colorbar(z, cmap, 'ionomodel %s %s' % (type[0], type[1]) +unit, cb_type=cb_type)
         self.ax.contourf(X, Y, Vi, cmap=cmap, norm=cmap_args['norm'], transform=ccrs.PlateCarree())
 
     def draw_avroral_oval(self, surf_data, hemisphere='north'):
@@ -506,14 +517,14 @@ class SWORD():
 
         self.draw_colorbar(z, cmap='coolwarm', label='avroral egrs/cm2s')
         self.ax.contourf(X, Y, Vi, transform=ccrs.PlateCarree(), cmap='coolwarm')"""
-
+        cb_type = 'zero_min_oval'
 
         X, Y, flux_value = surf_data
         #print(flux_value[np.isnan(flux_value)])
         #nonnan_values = flux_value[not np.isnan(flux_value)]
 
         flux_value[np.isnan(flux_value)] = 0
-        cmap_args = self.draw_colorbar(flux_value, cmap=plt.get_cmap('jet'), label='auroral %s ergs/cm²' % hemisphere, cb_type='zero_min')
+        cmap_args = self.draw_colorbar(flux_value, cmap=plt.get_cmap('cool'), label='OVATION auroral oval diffuse %s_hemi ergs/cm²' % hemisphere, cb_type=cb_type)
         #cmap.set_under('white', 0)
 
         levels = np.linspace(0.25, 4, 20)
@@ -525,24 +536,12 @@ class SWORD():
             #rotated_pole = ccrs.RotatedPole(pole_longitude=0, pole_latitude=0)
         rotated_pole = ccrs.PlateCarree()
         #self.ax.contourf(X, Y, flux_value, **cmap_args, transform=rotated_pole, alpha=0.85)
-        self.ax.contourf(X, Y, flux_value, cmap=plt.get_cmap('jet'), levels=levels, transform=rotated_pole, alpha=0.85)
+        self.ax.contourf(X, Y, flux_value, cmap=plt.get_cmap('cool'), levels=levels, transform=rotated_pole, alpha=0.85)
         #self.ax.contourf(X, Y, flux_value, cmap=cmap, levels=levels, transform=rotated_pole, alpha=0.85)
 
 
     def draw_colorbar(self, values, cmap, label, cb_type='zero_center'):
         print(label, cb_type, values.max(), values.min())
-        """
-
-         #iono
-        if np.abs(values.min()) > np.abs(values.max()):
-                vmin, vmax = -1 * np.abs(values.min()), np.abs(values.min())
-            else:
-                vmin, vmax = -1 * np.abs(values.max()), np.abs(values.max())
-            cm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
-            #cm = plt.cm.ScalarMappable(cmap=cmap, )
-            #cmap_args = dict(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
-            cmap_args = dict(cmap=cmap, vmin=vmin, vmax=vmax)
-            """
 
         if cb_type == 'zero_center':
             # scatter
@@ -556,7 +555,7 @@ class SWORD():
             if ('FAC' in label) and vmax > 10:
                 bounds = [vmin, -5.0, -4., -3., -2., -1., 0, 1., 2., 3., 4., 5., vmax]
             elif ('d' in label) and vmax > 50:
-                bounds = [vmin, -50.0, -40., -30., -20., -10., 0, 10., 20., 30., 40., 50., vmax]
+                bounds = [vmin, -100.0, -75., -50., -25.,  0,  25., 50., 75., 100., vmax]
             else:
                 delta = vmax/5
                 bounds = [x for x in np.arange(vmin, vmax+delta, delta)]
@@ -566,11 +565,13 @@ class SWORD():
             #cm = plt.cm.ScalarMappable(cmap=cmap)
             cmap_args = dict(cmap=cmap, norm=norm)
         elif cb_type == 'DMA_anomaly':
-            bounds = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
+            #bounds = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
+            cmap.set_under('white', 0)
+            bounds = [-1.0, -0.5, 0, 0.5, 1]
             norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
             cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
             cmap_args = dict(cmap=cmap, norm=norm)
-        elif cb_type == 'zero_min':
+        elif 'zero_min' in cb_type:
             """
             cmap_edit = plt.get_cmap(cmap)
             cmap_edit.set_under('white', alpha="0")
@@ -579,14 +580,16 @@ class SWORD():
             #colors = [(0, 1, 0), (1, 0, 0)]
             #lincm = LinearSegmentedColormap.from_list(
             #    "Custom", colors, N=20)
-            cm = LinearSegmentedColormap.from_list(
-                'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=0.45, b=1.),
-                cmap(np.linspace(0.45, 1., 100)))
-            cm.set_under('white', 0)
+            if 'oval' in cb_type:
+                cm = LinearSegmentedColormap.from_list(
+                    'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=0.45, b=1.), cmap(np.linspace(0.45, 1., 100)))
+                cm.set_under('white', 0)
+            else:
+                cmap = plt.get_cmap('jet')
             norm = plt.Normalize(vmin=0, vmax=values.max())
             cm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
             #cm.set_under('white', 0)
-            cmap_args = dict(cmap=cm, norm=norm)
+            cmap_args = dict(cmap=cmap, norm=norm)
 
         else:
             vmin, v_max = values.min(), values.max()
@@ -634,9 +637,10 @@ class SWORD():
     def draw_vector(self, sw_pos, B):
         X, Y = sw_pos[:, 1], sw_pos[:, 0]
         #B = sw_value[:, :2]
-        u = 50
-        q = self.ax.quiver(X, Y, B[:, 0], B[:, 1], transform=ccrs.PlateCarree(), width=0.0008, color='m', zorder=8, alpha=0.7)
-        self.ax.quiverkey(q, X=0.7, Y=0.99, U=u, labelpos='E', label='{N, E} vector length = %s' % u, transform=ccrs.PlateCarree())
+        u = 100
+        q = self.ax.quiver(X, Y, B[:, 0], B[:, 1], transform=ccrs.PlateCarree(),
+                           width=0.0006, color='m', zorder=8, alpha=0.75)
+        self.ax.quiverkey(q, X=0.7, Y=1.0175, U=u,  labelpos='E', label='SWARM-model vector length {dN, dE} = %s' % u, transform=ccrs.PlateCarree())
 
     def draw_shapefile(self, shapefile):
         #inProj = Proj(init='laea', preserve_units=True)

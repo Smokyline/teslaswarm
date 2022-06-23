@@ -54,7 +54,7 @@ def get_image_page(request):
     param_dict = {}
     for p in param_name:
         param_dict[p] = request.GET[p]
-    #print(param_dict)
+    print(param_dict)
     """
     {'proj_type': 'miller', 'plot_liter': 'true:false:false:false', 'sw_liter': 'A', 'sw_delta': '300', 
     'from_date': '2017-09-07T00:00:00', 'to_date': '2017-09-09T00:00:00', 'sw_channel': '1', 'annotate_sw_value': 'true', 
@@ -98,16 +98,22 @@ def get_image_page(request):
     else:
         annotate_sw_value_bool = False
 
+    if param_dict['igrf_vector_diffChaos'] == 'true':
+        sm.set_swarm_chaos_vectorDiff(b=True)
+    elif param_dict['igrf_vector_diff'] == 'true':
+        sm.set_swarm_igrf_vectorDiff(b=True)
+
     if param_dict['proj_type'] != 'plot':
-        #TODO AC A&C fac etc
-        if param_dict['sw_liter'] == 'AC':
+        # vector difference between swarm and IGRF-13 model
+        if param_dict['sw_liter'] == 'A-C':  # |A-C|
             swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
             swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
             SWARM_SET = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
-        elif param_dict['sw_liter'] == 'A&C':
+        elif param_dict['sw_liter'] == 'AC':  # J2
             SWARM_SET = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
-        else:
-            SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+        else:  # J1
+            SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], from_date=dt_from, to_date=dt_to,
+                                         fac_mod=fac_mod)
 
     #   модель ионосферы
     if not ('undefined' in str(param_dict['iono_bz'])):
@@ -145,14 +151,6 @@ def get_image_page(request):
     if not ('-' in str(param_dict['supermag_obs'])):
         sm.set_supermag_obs_codes(codes=param_dict['supermag_obs'], deg_radius=float(param_dict['deg_radius']))
 
-
-    # vector difference between swarm and IGRF-13 model
-    if param_dict['igrf_vector_diff'] == 'true':
-        sm.set_swarm_igrf_vectorDiff(b=True)
-    elif param_dict['igrf_vector_diffChaos'] == 'true':
-        sm.set_swarm_chaos_vectorDiff(b=True)
-
-
     # convert swarm value to DMA anomaly measure mu
     if param_dict['measure_mu'] == 'true':
         measure_mu = True
@@ -173,7 +171,7 @@ def get_image_page(request):
     if param_dict['txt_out'] == 'true':
         sm.set_txt_out(b=True)
 
-    print(vars(sm))
+    print(vars(sm), 'request control')
     ###############################################
     if param_dict['proj_type'] == 'plot':
         # append auroral value to plot
@@ -183,6 +181,7 @@ def get_image_page(request):
         include_data = []
         bool_set = sm.get_strParam2arrayParam(param_dict['plot_liter'])
         station = None
+        # TODO switch or channel to and, switch and sat to or
         for i, selected in enumerate(bool_set):
             if selected:
                 if i == 0:   # if A, B, C
@@ -192,13 +191,13 @@ def get_image_page(request):
                 elif i == 2:   # if A, B, C
                     swarm_set = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
                 elif i == 3:   # if A&C
-                    # |A-C|
-                    swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                    swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                    swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
-                elif i == 4:
                     # A&C
                     swarm_set = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
+                elif i == 4:    # if |A-C|
+                    swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C,
+                                                    sw_channel=sw_channel)
                 if fac_mod:
                     labels.append('swarm-%s %s' % (swarm_set[0], 'fac'))
                 else:
@@ -223,7 +222,7 @@ def get_image_page(request):
                                                     proj_type=param_dict['proj_type'], annotate_sw_value_bool=annotate_sw_value_bool)
     os.umask(original_umask)
 
-    if status == 0:
+    if status in [0, 2]:
         return render(request, 'error.html', {'ERROR_MESSAGE': message})
 
     id = message

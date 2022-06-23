@@ -41,7 +41,6 @@ def data_reduction(respond, delta, fac2_mod=False):
     else:
         redu_resp = np.empty((0, M))
 
-    print(delta)
     if delta <= 1:
         window = 1
     else:
@@ -98,14 +97,13 @@ def calc_ACvector(sw_a_cd, sw_c_cd, sw_a_values, sw_c_values, channel):
         x = np.mean([cd_a[1], cd_c[1]])
         y = np.mean([cd_a[0], cd_c[0]])
         r = np.mean([cd_a[2], cd_c[2]])
+        #x, y, r = cd_a[1], cd_a[0], cd_a[2]
         coord = np.append(coord, [[y, x, r]], axis=0)
 
-        if channel == 3:
-            v = np.sqrt(np.power(av[0] - cv[0], 2) +
-                        np.power(av[1] - cv[1], 2) +
-                        np.power(av[2] - cv[2], 2))
-        else:
+        if channel != None:
             v = np.sqrt(np.power(av[channel] - cv[channel], 2))
+        else:
+            v = np.sqrt(np.power(av - cv, 2))
         values = np.append(values, v)
 
     return coord, np.array(values)
@@ -256,7 +254,14 @@ def swarm_egrf_vector_subtraction(swarm_pos, swarm_values_full, swarm_date):
     dE = sw_E - igrf_value[:, 1]
     dC = sw_C - igrf_value[:, 2]
     dF = sw_F - igrf_value[:, 3]
-    return np.array([dN, dE, dC, dF]).T
+    sat_H = np.sqrt(sw_F ** 2 - sw_C ** 2)
+    model_H = np.sqrt(igrf_value[:, 3] ** 2 - igrf_value[:, 2] ** 2)
+    dH = sat_H - model_H
+
+    print(np.array([sw_N, sw_E, sw_C, sw_F]).T, 'swarm')
+    print(np.array([igrf_value[:, 0],igrf_value[:, 1], igrf_value[:, 2], igrf_value[:, 3]]).T, 'chaos')
+    print(sat_H - model_H, np.min(sat_H - model_H), np.max(sat_H - model_H), 'dH')
+    return np.array([dN, dE, dC, dH]).T
 
 def magfield_variation(n_swarm, e_swarm, x_igrf, y_igrf, ):
     """
@@ -310,19 +315,21 @@ def get_superMAG_observ_loc(code):
 
 def get_superMAG_value_from_web(date, station):
     #print(date, station)
-    answer = SuperMAGGetData(logon='pilipenko',start='%sT00:00:00'%date, extent=86400,
-                             station=station, flagstring='',)
+    answer = SuperMAGGetData(logon='pilipenko',start='%sT00:00:00'%date, extent=86400,station=station, flagstring='',)
+    #answer = SuperMAGGetData(logon='pilipenko',start='%sT00:00:00'%date, 86400, 'all', station, FORMAT = 'list')
+
     print(answer)
     station_data = []
     i, zero_time = 0, decode_str_dt_param(date + 'T' + '00:00:00')
     #https://supermag.jhuapl.edu/mag/?fidelity=low&start=2017-01-01T00%3A00%3A00.000Z&interval=23%3A59&tab=api#pythonClientDocumentationSection
-    for n, e, c in zip(sm_grabme(answer[1], 'N', 'nez'), sm_grabme(answer[1], 'E', 'nez'), sm_grabme(answer[1], 'Z', 'nez')):
+    #for n, e, c in zip(sm_grabme(answer[1], 'N', 'nez'), sm_grabme(answer[1], 'E', 'nez'), sm_grabme(answer[1], 'Z', 'nez')):
+    for n, e, c in zip(sm_grabme(answer[1], 'N', 'geo'), sm_grabme(answer[1], 'E', 'geo'), sm_grabme(answer[1], 'Z', 'geo')):
         zero_time = zero_time + pd.Timedelta('%s minutes' % 1)
         station_data.append([zero_time, n, e, c])
         i += 1
     return np.array(station_data)
 
-def get_sMAGstation_value_by_time(date_array, time_array, channel, delta, station):
+def get_sMAGstation_value_by_time(date_array, time_array, delta, station):
     #print(channel, station)
 
     """
@@ -375,42 +382,55 @@ def get_sMAGstation_value_by_time(date_array, time_array, channel, delta, statio
                 future_values = get_future_value(station_values[station_last_value_idx],
                                                  station_values[station_last_value_idx + 1], step)
         return np.array(extend_station_data)
-
+    print('start import data from station %s date: %s' % (station, date_array[0]))
     station_data = get_superMAG_value_from_web(date_array[0], station)
     print('superMAG ground station %s %s len %s' % (station, date_array[0], len(station_data)))
     this_day_time_array = np.arange(station_data[0, 0], station_data[0, 0] + datetime.timedelta(days=1),
                                     datetime.timedelta(seconds=1)).astype(datetime.datetime)
     station_sec_time = []
-    station_sec_value = []
+    station_sec_value_N = []
+    station_sec_value_E = []
+    station_sec_value_Z = []
     for i, date in enumerate(date_array):
         if i == 0:
             station_times = station_data[:, 0]
             station_values = station_data[:, 1:]
-            day_data_per_sec = fill_day_value(this_day_time_array, station_times, station_values[:, channel])
-            station_sec_time.extend(day_data_per_sec[:, 0])
-            station_sec_value.extend(day_data_per_sec[:, 1])
+            day_data_per_sec_N = fill_day_value(this_day_time_array, station_times, station_values[:, 0])
+            station_sec_time.extend(day_data_per_sec_N[:, 0])
+            station_sec_value_N.extend(day_data_per_sec_N[:, 1])
+            day_data_per_sec_E = fill_day_value(this_day_time_array, station_times, station_values[:, 1])
+            station_sec_value_E.extend(day_data_per_sec_E[:, 1])
+            day_data_per_sec_Z = fill_day_value(this_day_time_array, station_times, station_values[:, 2])
+            station_sec_value_Z.extend(day_data_per_sec_Z[:, 1])
+
         if i != 0 and date_array[i-1] != date_array[i]:
             station_data = get_superMAG_value_from_web(date, station)
             this_day_time_array = np.arange(station_data[0, 0], station_data[0, 0] + datetime.timedelta(days=1),
                                             datetime.timedelta(seconds=1)).astype(datetime.datetime)
             station_times = station_data[:, 0]
             station_values = station_data[:, 1:]
-            day_data_per_sec = fill_day_value(this_day_time_array, station_times, station_values[:, channel])
-            station_sec_time.extend(day_data_per_sec[:, 0])
-            station_sec_value.extend(day_data_per_sec[:, 1])
-    #print(station_sec_value)
-    #print(station_sec_time)
+            day_data_per_sec_N = fill_day_value(this_day_time_array, station_times, station_values[:, 0])
+            station_sec_time.extend(day_data_per_sec_N[:, 0])
+            station_sec_value_N.extend(day_data_per_sec_N[:, 1])
+            day_data_per_sec_E = fill_day_value(this_day_time_array, station_times, station_values[:, 1])
+            station_sec_value_E.extend(day_data_per_sec_E[:, 1])
+            day_data_per_sec_Z = fill_day_value(this_day_time_array, station_times, station_values[:, 2])
+            station_sec_value_Z.extend(day_data_per_sec_Z[:, 1])
 
-
-    station_delta_value = []
+    station_delta_value_N = []
+    station_delta_value_E = []
+    station_delta_value_Z = []
     for i, cd in enumerate(date_array):
         sw_dt = decode_str_dt_param(cd+'T'+time_array[i])
         for k, station_dt in enumerate(station_sec_time):
             if station_dt == sw_dt:
-                station_delta_value.append(station_sec_value[k])
+                station_delta_value_N.append(station_sec_value_N[k])
+                station_delta_value_E.append(station_sec_value_E[k])
+                station_delta_value_Z.append(station_sec_value_Z[k])
+    station_delta_value_F = np.sqrt(np.power(station_delta_value_N, 2) + np.power(station_delta_value_E, 2)
+                                    + np.power(station_delta_value_Z, 2))
 
-    #print(np.array(station_delta_value))
-    return np.array(station_delta_value)
+    return np.array([station_delta_value_N, station_delta_value_E, station_delta_value_Z, station_delta_value_F]).T
 
 
 
@@ -474,7 +494,7 @@ def mera_mu(swarm_resp):
 
 
 def cart_to_cartGeomag_coord(mag_xyz, phi, theta):
-    PHI_P, THETA_P = math.radians(phi), math.radians(-1*theta)
+    PHI_P, THETA_P = math.radians(phi), math.radians(theta)
 
     R = np.array([
         [np.cos(PHI_P) * np.cos(THETA_P), -1 * np.sin(PHI_P), np.cos(PHI_P) * np.sin(THETA_P)],
@@ -535,11 +555,12 @@ def get_auroral_flux(dt, atype='diff', jtype='energy', hemishpere='N'):
 
     Y = mlatgrid.flatten()
     X = mltgrid.flatten() / 24 * 360
-    XYmag = np.array([GEO2MAG(Y[i], X[i], dt) for i in range(len(X))])
-    Y = XYmag[:, 1]
+    geo_latlon = geomag2geo(latlon=np.array([Y, X]).T, THETA=THETA_P, PHI=PHI_P)
+    Y, X = geo_latlon[:, 0], geo_latlon[:, 1]
 
-    midnight_lon = get_lon_from_LT(dt)
-    X = X - midnight_lon
+    #midnight_lon = get_lon_from_LT(dt)
+    midnight_lat, midnight_lon = sun_pos(dt)
+    X = midnight_lon + X
     for i in range(len(X)):
         if X[i] < 0:
             X[i] = 360 + X[i]
@@ -589,13 +610,17 @@ def get_nearest_auroral_point_to_swarm(swarm_set):
     #   auroral без reshape
     estimator = ovation_prime.FluxEstimator('diff', 'energy')
     def get_auraral_xyz(datetime):
-        midnight_lon = get_lon_from_LT(datetime)
+        midnight_lat, midnight_lon = sun_pos(datetime)
+        THETA_N, PHI_N = 213.00, 85.54
+        THETA_S, PHI_S = 223., -64.24
+
         mlatgridN, mltgridN, fluxgridN = estimator.get_flux_for_time(datetime, hemi='N')
         mlatgridS, mltgridS, fluxgridS = estimator.get_flux_for_time(datetime, hemi='S')
         YN = mlatgridN.flatten()
         XN = mltgridN.flatten() / 24 * 360
-        YN = np.array([GEO2MAG(YN[i], XN[i], datetime) for i in range(len(XN))])[:, 1]
-        XN = XN - midnight_lon
+        geo_latlon = geomag2geo(latlon=np.array([YN, XN]).T, THETA=THETA_N, PHI=PHI_N)
+        YN, XN = geo_latlon[:, 0], geo_latlon[:, 1]
+        XN = midnight_lon + XN
         for i in range(len(XN)):
             if XN[i] < 0:
                 XN[i] = 360 + XN[i]
@@ -604,8 +629,9 @@ def get_nearest_auroral_point_to_swarm(swarm_set):
 
         YS = mlatgridS.flatten()
         XS = mltgridS.flatten() / 24 * 360
-        YS = np.array([GEO2MAG(YS[i], XS[i], datetime) for i in range(len(XS))])[:, 1]
-        XS = XS - midnight_lon
+        geo_latlon = geomag2geo(latlon=np.array([YS, XS]).T, THETA=THETA_S, PHI=PHI_S)
+        YS, XS = geo_latlon[:, 0], geo_latlon[:, 1]
+        XS = midnight_lon + XS
         for i in range(len(XS)):
             if XS[i] < 0:
                 XS[i] = 360 + XS[i]
@@ -798,8 +824,10 @@ def sun_pos(dt):
 def get_solar_coord(date, lon):
     lon_to360 = lambda x: (x - 180) % 360 - 180  # -180 180 to 0 360
     lon_to180 = lambda x: (x + 180) % 360 - 180  # 0 360 to -180 180
-    midnight_lon = get_lon_from_LT(date)
-    solar_coord_lon = lon_to360(lon) - midnight_lon
+    midnight_lat, midnight_lon = sun_pos(date)
+
+    #midnight_lon = get_lon_from_LT(date)
+    solar_coord_lon = midnight_lon + lon_to360(lon)
     if solar_coord_lon < 0:
         solar_coord_lon = 360 + solar_coord_lon
     elif solar_coord_lon >= 360:
@@ -872,14 +900,14 @@ def mag2mlt(sw_pos, swarm_date, swarm_time):
     return np.array(convert_mlt)
 
 
-def geo2geomag(latlon_coord, PHI, THETA):
+def geomag2geo(latlon, PHI, THETA):
     switched_swarm_pos = []
-    for lat, lon in latlon_coord:
-        lat_a, lon_a = geo2geomag_foo(lat, lon, PHI, THETA)
+    for lat, lon in latlon:
+        lat_a, lon_a = geomag2geo_foo(lat, lon, PHI, THETA)
         switched_swarm_pos.append([lat_a, lon_a])
     return np.array(switched_swarm_pos)
 
-def geo2geomag_foo(glat: float, glon: float, PHI, THETA) :
+def geomag2geo_foo(glat: float, glon: float, PHI, THETA) :
     """
     Converts GEOGRAPHIC (latitude,longitude) to GEOMAGNETIC (latitude, longitude).
     Ground-level altitude
@@ -998,13 +1026,13 @@ def latlt2polar(lat, lt, hemisphere):
 def cart2polar(x, y):
     rho = np.sqrt(x ** 2 + y ** 2)
     phi = np.arctan2(y, x)
-    return (rho, phi)
+    return (rho, np.rad2deg(phi))
 
 
 def pol2cart(rho, phi):
     x = rho * np.cos(phi)
     y = rho * np.sin(phi)
-    return (x, y)
+    return [x, y]
 
 def to_cast(sph_x, sph_y):
     # geodetic_to_geocentric
@@ -1085,8 +1113,8 @@ def shiftlon(lon, lat):
 
 def geo_to_gg(radius, theta):
     """
-    Compute geodetic colatitude and vertical height above the ellipsoid from
-    geocentric radius and colatitude.
+    from geocentric radius and colatitude.
+    to geodetic colatitude and vertical height above the ellipsoid
 
     Parameters
     ----------

@@ -48,6 +48,6 @@ def set_param():
 
 
 if __name__ == '__main__':
-    print('please, launch this script from project dir \n for this use $ python tests/test_iono.py')
+    print('please, launch this script from project dir \n for this use $ python testing/test_iono.py')
     set_param()
     run_exe_program()
