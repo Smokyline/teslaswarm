@@ -161,7 +161,7 @@ class teslaswarmControl():
         return np.array(floatlist)
 
 
-    def get_projection_image(self, swarm_set, from_date, to_date, swarm_channel, proj_type, annotate_sw_value_bool):
+    def get_projection_image(self, swarm_set, from_date, to_date, swarm_channel, proj_type, annotate_sw_time_bool):
         """
         (swarm_info, proj_type,
         draw_ionomodel_n=False, draw_ionomodel_s=False, draw_auroral_s=None,
@@ -178,7 +178,7 @@ class teslaswarmControl():
                                        draw_IGRFvector_diff=self.draw_IGRFvector_diff, draw_CHAOSvector_diff=self.draw_CHAOSvector_diff,
                                        observ_code_value=self.observ_code, measure_mu=self.measure_mu, mag_grid_coord=self.mag_grid_coord,
                                        cut_swarm_value_bool=self.cut_swarm_value_bool, proj_extend_loc=self.proj_extend_loc,
-                                       annotate_sw_value_bool=annotate_sw_value_bool, cut_deg_radius=self.deg_radius, txt_out=self.txt_out, delta=self.swarm_value_delta)
+                                       annotate_sw_time_bool=annotate_sw_time_bool, cut_deg_radius=self.deg_radius, txt_out=self.txt_out, delta=self.swarm_value_delta)
         if status == 1 and self.txt_out:
             message = out
         if status == 1 and self.txt_out == False:

@@ -94,9 +94,9 @@ def get_image_page(request):
 
     #TODO убрать анотации в html
     if param_dict['annotate_sw_value'] == 'true':
-        annotate_sw_value_bool = True
+        annotate_sw_time_bool = True
     else:
-        annotate_sw_value_bool = False
+        annotate_sw_time_bool = False
 
     if param_dict['igrf_vector_diffChaos'] == 'true':
         sm.set_swarm_chaos_vectorDiff(b=True)
@@ -225,7 +225,7 @@ def get_image_page(request):
                                                  sw_channel=sw_channel, delta=delta, station=station)
     else:
         (status, message) = sm.get_projection_image(swarm_set=SWARM_SET, from_date=dt_from, to_date=dt_to, swarm_channel=sw_channel,
-                                                    proj_type=param_dict['proj_type'], annotate_sw_value_bool=annotate_sw_value_bool)
+                                                    proj_type=param_dict['proj_type'], annotate_sw_time_bool=annotate_sw_time_bool)
     os.umask(original_umask)
 
     if status in [0, 2]:

@@ -10,7 +10,7 @@ def get_proj_image(swarm_info, proj_type,
                    draw_auroral_n=None, draw_shape=None, draw_IGRFvector_diff=False, draw_CHAOSvector_diff=False,
                    observ_code_value=None, measure_mu=False, mag_grid_coord=False,
                    cut_swarm_value_bool=False, proj_extend_loc=None,
-                   annotate_sw_value_bool=False, cut_deg_radius=5, txt_out=False, delta=1):
+                   annotate_sw_time_bool=False, cut_deg_radius=5, txt_out=False, delta=1):
     swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values_necf = swarm_info[0]   # swarm_set
     from_date, to_date, swarm_channel = swarm_info[1], swarm_info[2], swarm_info[3]
     d2txt = Data2Text()
@@ -178,7 +178,7 @@ def get_proj_image(swarm_info, proj_type,
         vline_dt = np.array(swarm_dt)
     else:
         vline_dt = None
-    sword.draw_swarm_path(swarm_pos, points_time=vline_dt)
+    sword.draw_swarm_path(swarm_pos, points_time=vline_dt, annotate=annotate_sw_time_bool)
 
     # отрисовка вектора (X, Y, n, e) или (X, Y, |n-x|, |e-y|)
     if draw_IGRFvector_diff or draw_CHAOSvector_diff:

@@ -312,14 +312,16 @@ class SWORD():
 
         plt.grid(True)
 
-    def draw_swarm_path(self, points, points_time=None):
+    def draw_swarm_path(self, points, points_time=None, annotate=False):
         ax_proj_xyz = self.ax.projection.transform_points(self.transform, points[:, 1], points[:, 0], points[:, 2] )
         X, Y, Z = ax_proj_xyz[:, 0], ax_proj_xyz[:, 1], ax_proj_xyz[:, 1]
         x_deg, y_deg = points[:, 1], points[:, 0]
 
         # swarm path -----------------
-        #if self.proj_type != 'miller':
-        self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=self.ax.projection)
+        if self.proj_type != 'miller':
+            self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4)
+        else:
+            self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=self.ax.projection)
 
         #self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=ccrs.Geodetic())
 
@@ -349,14 +351,19 @@ class SWORD():
                         """line = Line2D([c1[0], x1, c2[0]],
                                       [c1[1], y1, c2[1]])
                         self.ax.add_line(line, )"""
-                        if self.extend is not None:
-                            if self.extend[0] < x_deg[k] < self.extend[1] and self.extend[2] < y_deg[k] < self.extend[3]:
-                                self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5,
+                        extend_bool = self.extend is not None
+                        annotate_and_long_range = annotate == False and points_time[-1] - points_time[0] < np.timedelta64(1, 'D')
+                        if annotate_and_long_range or annotate:
+                            if extend_bool:
+                                if self.extend[0] < x_deg[k] < self.extend[1] and self.extend[2] < y_deg[k] < self.extend[3]:
+                                    self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5,
                                              transform=self.ax.projection)
                                 # self.ax.annotate(text, xytext=(x2, y2), xy=(x1, y1), size=10, fontsize=12)
-                                pass
+                            else:
+                                self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
                         else:
                             self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
+
                     except Exception as e:
                         print(e)
                     last_point = point_time
