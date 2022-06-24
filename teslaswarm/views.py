@@ -104,16 +104,19 @@ def get_image_page(request):
         sm.set_swarm_igrf_vectorDiff(b=True)
 
     if param_dict['proj_type'] != 'plot':
-        # vector difference between swarm and IGRF-13 model
-        if param_dict['sw_liter'] == 'A-C':  # |A-C|
-            swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-            swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-            SWARM_SET = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
-        elif param_dict['sw_liter'] == 'AC':  # J2
-            SWARM_SET = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
-        else:  # J1
-            SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], from_date=dt_from, to_date=dt_to,
-                                         fac_mod=fac_mod)
+        try:
+            # vector difference between swarm and IGRF-13 model
+            if param_dict['sw_liter'] == 'A-C':  # |A-C|
+                swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                SWARM_SET = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
+            elif param_dict['sw_liter'] == 'AC':  # J2
+                SWARM_SET = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
+            else:  # J1
+                SWARM_SET = sm.get_swarm_set(sw_liter=param_dict['sw_liter'], from_date=dt_from, to_date=dt_to,
+                                             fac_mod=fac_mod)
+        except:
+            return render(request, 'error.html', {'ERROR_MESSAGE': 'NO SWARM VALUE'})
 
     #   модель ионосферы
     if not ('undefined' in str(param_dict['iono_bz'])):
@@ -184,20 +187,23 @@ def get_image_page(request):
         # TODO switch or channel to and, switch and sat to or
         for i, selected in enumerate(bool_set):
             if selected:
-                if i == 0:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                elif i == 1:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='B', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                elif i == 2:   # if A, B, C
-                    swarm_set = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                elif i == 3:   # if A&C
-                    # A&C
-                    swarm_set = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
-                elif i == 4:    # if |A-C|
-                    swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                    swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
-                    swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C,
-                                                    sw_channel=sw_channel)
+                try:
+                    if i == 0:   # if A, B, C
+                        swarm_set = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    elif i == 1:   # if A, B, C
+                        swarm_set = sm.get_swarm_set(sw_liter='B', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    elif i == 2:   # if A, B, C
+                        swarm_set = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                    elif i == 3:   # if A&C
+                        # A&C
+                        swarm_set = sm.get_swarm_set(sw_liter='_', from_date=dt_from, to_date=dt_to, fac_mod=True)
+                    elif i == 4:    # if |A-C|
+                        swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                        swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
+                        swarm_set = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C,
+                                                        sw_channel=sw_channel)
+                except:
+                    return render(request, 'error.html', {'ERROR_MESSAGE': 'NO SWARM VALUE'})
                 if fac_mod:
                     labels.append('swarm-%s %s' % (swarm_set[0], 'fac'))
                 else:

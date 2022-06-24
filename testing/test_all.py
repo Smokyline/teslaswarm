@@ -16,7 +16,6 @@ def test_lib_load():
         import cartopy  # request Proj 8.0.0 https://stackoverflow.com/questions/53697814/using-pip-install-to-install-cartopy-but-missing-proj-version-at-least-4-9-0
         import pyproj
         import astropy
-        import chaosmagpy
         import shapely
         import geog     # pip
         import geospacepy   # pip below

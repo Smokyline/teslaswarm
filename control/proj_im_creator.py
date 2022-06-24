@@ -146,11 +146,16 @@ def get_proj_image(swarm_info, proj_type,
         vline_min_path = True
         if len(swarm_pos_in_poly) == 0:
             STATUS = 0
-            out = 'NO SWARM DATA IN TIME INTERVAL FROM %s TO %s IN LOCATION lat:%s... %s lon:%s... %s\n\n' \
-                  'hint: expand specified location, date range or decrease delta' % (
-                      swarm_date[0] + 'T' + swarm_time[0], swarm_date[-1] + 'T' + swarm_time[-1], proj_extend_loc[0],
-                      proj_extend_loc[1],
-                      proj_extend_loc[2], proj_extend_loc[3],)
+            try:
+                out = 'NO SWARM DATA IN TIME INTERVAL FROM %s TO %s IN LOCATION lat:%s... %s lon:%s... %s\n\n' \
+                      'hint: expand specified location, date range or decrease delta' % (
+                          swarm_date[0] + 'T' + swarm_time[0], swarm_date[-1] + 'T' + swarm_time[-1],
+                          proj_extend_loc[0],
+                          proj_extend_loc[1], proj_extend_loc[2], proj_extend_loc[3],)
+            except:
+                out = 'NO SWARM DATA IN TIME INTERVAL FROM %s TO %s \n\n' \
+                      'hint: expand specified location, date range or decrease delta' % (
+                          swarm_date[0] + 'T' + swarm_time[0], swarm_date[-1] + 'T' + swarm_time[-1])
             return (STATUS, out)
 
     else:
