@@ -142,7 +142,10 @@ def get_ionomodel_surf_file(param_dict, dt):
     #seconds_per_day = 24 * 60 * 60.0
     #ut_sec = float(param_dict['ut'])*(60 * 60.0)
     ut_h = int(float(param_dict['ut']))
-    ut_m = int((float(param_dict['ut'])%ut_h)*60)
+    if float(param_dict['ut']) == 0.:
+        ut_m = int((float(param_dict['ut'])*10)*60)
+    else:
+        ut_m = int((float(param_dict['ut'])%ut_h)*60)
     dt_model = datetime.datetime(dt.year, dt.month, dt.day, ut_h, ut_m)
     midnight_lat, midnight_lon = sun_pos(dt_model)
 

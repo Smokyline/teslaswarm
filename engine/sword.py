@@ -318,8 +318,8 @@ class SWORD():
         x_deg, y_deg = points[:, 1], points[:, 0]
 
         # swarm path -----------------
-        if self.proj_type != 'miller':
-            self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4)
+        #if self.proj_type != 'miller':
+        self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=self.ax.projection)
 
         #self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=ccrs.Geodetic())
 
