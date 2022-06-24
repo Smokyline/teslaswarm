@@ -1192,6 +1192,12 @@ def geo_to_gg(radius, theta):
 
 
 """
+Relationship between MLT, geomagnetic longitude, and UT
+MLT=UT+(MLNG-70)/15
+Relationship between LT, geographic longitude, and UT
+LT=UT+LNG/15
+
+
 def sphericalToVector(inp_ar):
     ar = np.array([0.0, 0.0, 0.0])
     ar[0] = -sin(inp_ar[1]) 

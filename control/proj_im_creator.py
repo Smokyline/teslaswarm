@@ -68,6 +68,7 @@ def get_proj_image(swarm_info, proj_type,
                                                    sword.extend[0], sword.extend[1],)
         cut_swarm_value_bool = True
 
+
     ######################################################################################################
     #   инициация рендера, указание проекции, и если требуется extend_loc - приближение конкретной области
 
@@ -125,18 +126,6 @@ def get_proj_image(swarm_info, proj_type,
     d2txt.annotate = ax_label
 
     # выбор точек измерений SWARM в указанном полигоне
-    # lat, lon
-    """
-    poly_points = [i1, i2, i3, i4] # lat... lat, lon... lon
-    i1 = [lat, lon]
-    [i1]--------[i2]
-      |         |
-      |  p_in_p |
-      |         |
-    [i4]--------[i3]
-    """
-
-
     if cut_swarm_value_bool:
         if sword.extend is not None:
             print('cut swarm_pos manual by proj_extend_loc')
@@ -148,11 +137,7 @@ def get_proj_image(swarm_info, proj_type,
             print('cut swarm_pos near obs')
             #p_in_p, poly = get_swarm_value_near_obs(swarm_pos, intermag_observ_code, proj_type)
             p_in_p = get_position_near_point(swarm_pos[:, :2], obs_location, degr_radius=cut_deg_radius)
-            sword.draw_point_with_annotate(obs_location, annotate=obs_code)
 
-        #print(len(swarm_pos))
-        #print(len(p_in_p))
-        #print(p_in_p)
         swarm_pos_in_poly = swarm_pos[p_in_p]
         swarm_values_in_poly = swarm_values[p_in_p]
         swarm_values_full_in_poly = swarm_values_necf[p_in_p]
@@ -169,14 +154,6 @@ def get_proj_image(swarm_info, proj_type,
             return (STATUS, out)
 
     else:
-        """if proj_type == 'ortho_n':
-            p_in_p = data_lat_up(swarm_pos, lat=0, hemisphere='N')    # bool
-            swarm_pos_in_poly = swarm_pos[p_in_p]
-            swarm_values_in_poly = swarm_values[p_in_p]
-        elif proj_type == 'ortho_s':
-            p_in_p = data_lat_up(swarm_pos, lat=0, hemisphere='S')     # bool
-            swarm_pos_in_poly = swarm_pos[p_in_p]
-            swarm_values_in_poly = swarm_values[p_in_p]"""
 
         swarm_pos_in_poly = swarm_pos
         swarm_values_in_poly = swarm_values
@@ -262,7 +239,8 @@ def get_proj_image(swarm_info, proj_type,
                                  annotate=False)  # отрисовка значение точек на орбите
     if draw_CHAOSvector_diff or draw_IGRFvector_diff:
         sword.draw_vector(swarm_pos_in_poly, B=vector_components)
-
+    if observ_code_value is not None:
+        sword.draw_point_with_annotate(obs_location, annotate=obs_code)
     # конвертация figure matplotlib в PIL image для stacker.py
     if cut_swarm_value_bool == True or proj_extend_loc is not None:
         sword.set_axis_label(ax_label, zoom_axis=True)

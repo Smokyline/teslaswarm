@@ -243,14 +243,14 @@ class SWORD():
                     ax3.plot(np.arange(len(obs_value)), obs_value[:, col], label='%s %s, nT' % (station_name, vect_comp))
 
                 obs_loc = get_superMAG_observ_loc(station_name)[:2]
-                p_in_p = get_position_near_point(pos, obs_loc[::-1], degr_radius=10)
+                p_in_p = get_position_near_point(pos, obs_loc, degr_radius=10)
                 p_in_p = [not elem for elem in p_in_p]
                 swarm_value_near_obs = value.copy()
                 swarm_value_near_obs[p_in_p] = np.nan
 
                 #print(ax3.get_zorder(), 'zordser')
                 #host.scatter(np.arange(len(time_list))[p_in_p], value[p_in_p], c='g', marker='+', label=label+' near obs', zorder=8)
-                host.plot(np.arange(len(time_list)), swarm_value_near_obs, c='r',label=label+' near obs', zorder=ax3.get_zorder() + 1)
+                host.plot(np.arange(len(time_list)), swarm_value_near_obs,  c='r',label=label+' near obs', zorder=ax3.get_zorder() + 1)
                 ax3.legend(loc=4)
                 ax3.grid(linestyle='--')
                 #ax3.set_zorder(host.get_zorder() - 1)
@@ -383,7 +383,7 @@ class SWORD():
         if 'CHAOS7' in custom_label:
             unit = custom_label + ' (nT)'
         if 'mu' in custom_label:
-            unit = custom_label + ' DMA anomaly lvl'
+            unit += ' DMA anomaly lvl'
             cb_type = 'DMA_anomaly'
             #cmap = plt.get_cmap('RdYlBu')
             c = mcolors.ColorConverter().to_rgb
@@ -505,7 +505,7 @@ class SWORD():
         lin = np.max(np.abs(z)) + (np.max(np.abs(z)) / 10)
 
         cmap_args = self.draw_colorbar(z, cmap, 'ionomodel %s %s' % (type[0], type[1]) +unit, cb_type=cb_type)
-        self.ax.contourf(X, Y, Vi, cmap=cmap, norm=cmap_args['norm'], transform=ccrs.PlateCarree())
+        self.ax.contourf(X, Y, Vi, cmap=cmap, norm=cmap_args['norm'], transform=ccrs.PlateCarree(), alpha=0.75)
 
     def draw_avroral_oval(self, surf_data, hemisphere='north'):
         """x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
@@ -692,8 +692,8 @@ class SWORD():
         #   for intermag observ for example
         #for point in points:
         x, y = float(pos[0]), float(pos[1])
-        self.ax.scatter(x, y, c='r', marker='*', s=100, transform=ccrs.PlateCarree())
-        self.ax.text(x, y, annotate, transform=ccrs.PlateCarree(), fontsize=10)
+        self.ax.scatter(x, y, c='r', marker='*', s=150, transform=self.transform, zorder=10)
+        self.ax.text(x, y, annotate, transform=self.transform, fontsize=10,zorder=10)
 
     def draw_polygon(self, poly):
         x, y = poly.exterior.xy
