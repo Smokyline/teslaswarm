@@ -104,7 +104,7 @@ def get_proj_image(swarm_info, proj_type,
         d2txt.DATA['auroral_s'] = {}
         d2txt.DATA['auroral_s']['lat'] = yxz[:, 0]
         d2txt.DATA['auroral_s']['lon'] = yxz[:, 1]
-        d2txt.DATA['auroral_s']['diff_ergs/cm^2'] = yxz[:, 2]
+        d2txt.DATA['auroral_s']['%s_ergs/cm^2'%draw_auroral_s['type']] = yxz[:, 2]
     if draw_auroral_n is not None:
         x, y, z, yxz = get_auroral_flux(draw_auroral_n['date'], hemishpere='N', atype=draw_auroral_n['type'])  # f(dt)
         sword.draw_avroral_oval([x,y,z], hemisphere='north', atype=draw_auroral_n['type'])
@@ -113,7 +113,7 @@ def get_proj_image(swarm_info, proj_type,
         d2txt.DATA['auroral_n'] = {}
         d2txt.DATA['auroral_n']['lat'] = yxz[:, 0]
         d2txt.DATA['auroral_n']['lon'] = yxz[:, 1]
-        d2txt.DATA['auroral_n']['diff_ergs/cm^2'] = yxz[:, 2]
+        d2txt.DATA['auroral_n']['%s_ergs/cm^2'%draw_auroral_n['type']] = yxz[:, 2]
 
     #   отрисовка на проекции shape файла
     if draw_shape is not None:

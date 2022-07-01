@@ -192,7 +192,6 @@ class SWORD():
                 coord_ticks.append('\n' + str(lon))
             coord_ticks = np.array(coord_ticks).astype(str)
             coord_ticks = np.array([''.join(x) for x in zip(coord_ticks[0::2], coord_ticks[1::2])])
-            coordtick_locations = np.arange(len(pos))
 
             # decode from str to datetime format
             points_time = np.array([decode_str_dt_param(d + 'T' + t) for d, t in zip(date_list, time_list)],
@@ -213,7 +212,7 @@ class SWORD():
                             last_point = point_time
                             line_idx.append(k)
                     date_ticks = date_ticks[line_idx]
-                    nonnan_value = [x for x in value if not np.isnan(x)]
+                    #nonnan_value = [x for x in value if not np.isnan(x)]
                     #host.vlines(x=line_idx, ymin=np.min(nonnan_value), ymax=np.max(nonnan_value), color='b',linestyle='--', alpha=.5, linewidths=1)
                 else:
                     coord_ticks_arange = np.arange(0, len(coord_ticks),
@@ -222,7 +221,7 @@ class SWORD():
 
             else:
                 coord_ticks_arange = np.arange(0, len(coord_ticks))
-
+            coord_ticks[0] = ''
 
             right_axes = []
 
@@ -250,7 +249,7 @@ class SWORD():
             host.set_xticklabels(date_ticks[:, 1], rotation=40)
             ax2.grid(False)
             ax2.set_xlim(host.get_xlim())
-            ax2.set_xticks(coordtick_locations[coord_ticks_arange])
+            ax2.set_xticks(np.arange(len(pos))[coord_ticks_arange])
             ax2.set_xticklabels(coord_ticks[coord_ticks_arange])
             ax2.tick_params(axis='x', labelsize=11, grid_alpha=0)
             ax2.annotate("GEO lat\nGEO lon", xy=(-0.04, 1.037), xycoords=ax2.transAxes, size=11)
@@ -332,25 +331,31 @@ class SWORD():
                         if k < len(X) - 1:
                             x1, y1, z1 = X[k], Y[k], Z[k]
                             x2, y2, z2 = X[k + 1], Y[k + 1], Z[k + 1]
+                            target_x, target_y = (x2 - x1), (y2 - y1)
 
                         else:
                             x1, y1, z1 = X[k], Y[k], Z[k]
                             x2, y2, z2 = X[k - 1], Y[k - 1], Z[k - 1]
+                            target_x, target_y = (x1 - x2), (y1 - y2)
+                        if self.proj_type != 'miller':
+                            m = 70000/np.sqrt(target_x ** 2 + target_y ** 2)
+                        else:
+                            m = 1 / np.sqrt(target_x ** 2 + target_y ** 2)
+                        target_x, target_y = target_x * m, target_y * m
+                        #target_x, target_y = (x2 - x1) * 7, (y2 - y1) * 7
+
                         text = str(point_time) + '\nLT:%s' % get_local_time(point_time.astype(datetime.datetime),
                                                                             points[k, 1])
-                        self.ax.arrow(x1, y1, (x2 - x1) * 7, (y2 - y1) * 7, head_width=0.75, head_length=0.25, zorder=5,
-                        #self.ax.arrow(x1, y1, (x2 - x1), (y2 - y1), head_width=0.75, head_length=0.25, zorder=5,
-                                      alpha=.65)
-                        """line = Line2D([c1[0], x1, c2[0]],
-                                      [c1[1], y1, c2[1]])
-                        self.ax.add_line(line, )"""
+                        #self.ax.arrow(x1, y1, (x2 - x1) * 7, (y2 - y1) * 7, head_width=0.75, head_length=0.25, zorder=5, alpha=.65)
+                        #self.ax.arrow(x1, y1, target_x, target_y, head_width=0.75, head_length=0.25, zorder=5,
+                        self.ax.arrow(x1, y1, target_x, target_y, head_width=0.75, head_length=0.25, zorder=5, alpha=.65)
+
                         extend_bool = self.extend is not None
                         annotate_and_long_range = annotate == False and points_time[-1] - points_time[0] < np.timedelta64(1, 'D')
                         if annotate_and_long_range or annotate:
                             if extend_bool:
                                 if self.extend[0] < x_deg[k] < self.extend[1] and self.extend[2] < y_deg[k] < self.extend[3]:
-                                    self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5,
-                                             transform=self.ax.projection)
+                                    self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
                                 # self.ax.annotate(text, xytext=(x2, y2), xy=(x1, y1), size=10, fontsize=12)
                             else:
                                 self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
