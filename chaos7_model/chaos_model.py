@@ -52,7 +52,7 @@ class CHAOS7():
         theta = 90. - swarm_pos[:, 0]  # colat deg
         phi = swarm_pos[:, 1]  # deg
         radius = swarm_pos[:, 2]  # radius in km
-        print(radius)
+        #print(radius)
         #print(theta[:10])
         #print(phi[:10])
         #print(radius[:10])
@@ -71,8 +71,8 @@ class CHAOS7():
         B_theta = B_theta * -1  # switch chaos vector coord
         B_radius = B_radius * -1  # switch chaos vector coord
 
-        print(np.array([sat_N, sat_E, sat_C,sat_F]).T, 'swarm')
-        print(np.array([B_theta, B_phi, B_radius, F_chaos]).T, 'chaos')
+        #print(np.array([sat_N, sat_E, sat_C,sat_F]).T, 'swarm')
+        #print(np.array([B_theta, B_phi, B_radius, F_chaos]).T, 'chaos')
 
         dN = sat_N - B_theta
         dE = sat_E - B_phi

@@ -99,11 +99,11 @@ class teslaswarmControl():
             param_dict = None
         self.ionomodel_param = param_dict
 
-    def set_auroral_oval(self, north=False, south=False, date=None):
+    def set_auroral_oval(self, north=False, south=False, date=None, type='diff'):
         if north:
-            self.draw_auroral_n = date
+            self.draw_auroral_n = {'date': date, 'type': type}
         if south:
-            self.draw_auroral_s = date
+            self.draw_auroral_s = {'date': date, 'type': type}
 
     def set_proj_extend_loc(self, loc=None):
         self.proj_extend_loc = loc

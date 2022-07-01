@@ -94,10 +94,10 @@ def calc_ACvector(sw_a_cd, sw_c_cd, sw_a_values, sw_c_values, channel):
     values = np.empty((0, 1))
 
     for cd_a, cd_c, av, cv in zip(sw_a_cd, sw_c_cd, sw_a_values, sw_c_values):
-        x = np.mean([cd_a[1], cd_c[1]])
-        y = np.mean([cd_a[0], cd_c[0]])
-        r = np.mean([cd_a[2], cd_c[2]])
-        #x, y, r = cd_a[1], cd_a[0], cd_a[2]
+        #x = np.mean([cd_a[1], cd_c[1]])
+        #y = np.mean([cd_a[0], cd_c[0]])
+        #r = np.mean([cd_a[2], cd_c[2]])
+        x, y, r = cd_a[1], cd_a[0], cd_a[2]
         coord = np.append(coord, [[y, x, r]], axis=0)
 
         if channel != None:
@@ -258,9 +258,9 @@ def swarm_egrf_vector_subtraction(swarm_pos, swarm_values_full, swarm_date):
     model_H = np.sqrt(igrf_value[:, 3] ** 2 - igrf_value[:, 2] ** 2)
     dH = sat_H - model_H
 
-    print(np.array([sw_N, sw_E, sw_C, sw_F]).T, 'swarm')
-    print(np.array([igrf_value[:, 0],igrf_value[:, 1], igrf_value[:, 2], igrf_value[:, 3]]).T, 'chaos')
-    print(sat_H - model_H, np.min(sat_H - model_H), np.max(sat_H - model_H), 'dH')
+    #print(np.array([sw_N, sw_E, sw_C, sw_F]).T, 'swarm')
+    #print(np.array([igrf_value[:, 0],igrf_value[:, 1], igrf_value[:, 2], igrf_value[:, 3]]).T, 'chaos')
+    #print(sat_H - model_H, np.min(sat_H - model_H), np.max(sat_H - model_H), 'dH')
     return np.array([dN, dE, dC, dH]).T
 
 def magfield_variation(n_swarm, e_swarm, x_igrf, y_igrf, ):
@@ -601,14 +601,14 @@ def eucl_distance(p1, p2_array):
     dist = np.sum(np.array([distX, distY]).T, axis=1)
     return np.sqrt(dist)
 
-def get_nearest_auroral_point_to_swarm(swarm_set):
+def get_nearest_auroral_point_to_swarm(swarm_set, atype):
     swarm_liter, swarm_pos, swarm_date, swarm_time, swarm_values = swarm_set
     print('nearest auroral point to swarm will get use data from swarm %s dt from %s to %s' % (
         swarm_liter, swarm_date[0] + ' ' + swarm_time[0],
         swarm_date[-1] + ' ' + swarm_time[-1]))
 
     #   auroral без reshape
-    estimator = ovation_prime.FluxEstimator('diff', 'energy')
+    estimator = ovation_prime.FluxEstimator(atype=atype, energy_or_number='energy')
     def get_auraral_xyz(datetime):
         midnight_lat, midnight_lon = sun_pos(datetime)
         THETA_N, PHI_N = 213.00, 85.54
@@ -655,7 +655,7 @@ def get_nearest_auroral_point_to_swarm(swarm_set):
             XY, Z = get_auraral_xyz(decode_str_dt_param(swarm_date[j] + 'T' + swarm_time[j]))
             zero_time = decode_str_dt_param(swarm_date[j] + 'T' + swarm_time[j])
         eucl = eucl_distance(pos, XY)
-        print(eucl[np.argmin(eucl)], decode_str_dt_param(swarm_date[j] + 'T' + swarm_time[j]), pos[0], XY[j])
+        #print(eucl[np.argmin(eucl)], decode_str_dt_param(swarm_date[j] + 'T' + swarm_time[j]), pos[0], XY[j])
         if eucl[np.argmin(eucl)] < 5:
             near_auroral_array.append(Z[np.argmin(eucl)])
         else:

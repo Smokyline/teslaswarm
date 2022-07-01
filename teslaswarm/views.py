@@ -37,6 +37,7 @@ def get_image_page(request):
         'auroral_date', # str
         'auroral_n',    # bool
         'auroral_s',    # bool
+        #'auroral_type',    # str
         'proj_extend_loc',  # str []
         'swarm_poly_loc',   # str [[]]
         'cut_obs_swarm_value',     # bool
@@ -64,7 +65,6 @@ def get_image_page(request):
     'cut_obs_swarm_value': 'false', 'obs_code': 'undefined', 'deg_radius': '5', 'igrf_vector_diff': 'true', 
     'measure_mu': 'false', 'near_auroral_points': 'false'}
     """
-    #TODO изменить default delta и dt from to
 
     dt_from, dt_to = decode_str_dt_param(param_dict['from_date']), decode_str_dt_param(param_dict['to_date'])
     sm = copy.deepcopy(TeslaSwarm)
@@ -78,10 +78,8 @@ def get_image_page(request):
     elif param_dict['sw_channel'] == 'c':
         sw_channel = 2
     elif param_dict['sw_channel'] == 'f':
-        #TODO add in html
         sw_channel = 3
-    elif param_dict['sw_channel'] == 'fac2':
-        #TODO fac2 to fac
+    elif param_dict['sw_channel'] == 'fac':
         sw_channel = None
         fac_mod = True
     else:
@@ -92,7 +90,6 @@ def get_image_page(request):
         sm.set_swarm_value_delta(delta)
 
 
-    #TODO убрать анотации в html
     if param_dict['annotate_sw_value'] == 'true':
         annotate_sw_time_bool = True
     else:
@@ -103,10 +100,13 @@ def get_image_page(request):
     elif param_dict['igrf_vector_diff'] == 'true':
         sm.set_swarm_igrf_vectorDiff(b=True)
 
+    if param_dict['sw_liter'] == 'AC' and not fac_mod:
+        return render(request, 'error.html', {'ERROR_MESSAGE': 'only FAC is available for SWARM-AC '})
+
     if param_dict['proj_type'] != 'plot':
         try:
             # vector difference between swarm and IGRF-13 model
-            if param_dict['sw_liter'] == 'A-C':  # |A-C|
+            if param_dict['sw_liter'] == '|A-C|':  # |A-C|
                 swarm_set_A = sm.get_swarm_set(sw_liter='A', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
                 swarm_set_C = sm.get_swarm_set(sw_liter='C', from_date=dt_from, to_date=dt_to, fac_mod=fac_mod)
                 SWARM_SET = sm.get_swarmAC_diff(swarm_set_A=swarm_set_A, swarm_set_C=swarm_set_C, sw_channel=sw_channel)
@@ -130,6 +130,8 @@ def get_image_page(request):
     #   модель аврорального овала
     if param_dict['auroral_n'] == 'true' or param_dict['auroral_s'] == 'true':
         auroral_date = decode_str_dt_param(param_dict['auroral_date'])
+        #auroral_type = param_dict['auroral_type']
+        auroral_type = 'diff'
         if param_dict['auroral_n'] == 'true':
             auroral_n = True
         else:
@@ -138,7 +140,7 @@ def get_image_page(request):
             auroral_s = True
         else:
             auroral_s = False
-        sm.set_auroral_oval(north=auroral_n, south=auroral_s, date=auroral_date)
+        sm.set_auroral_oval(north=auroral_n, south=auroral_s, date=auroral_date, type=auroral_type)
 
 
     if not ('undefined' in str(param_dict['proj_extend_loc'])):
@@ -184,7 +186,6 @@ def get_image_page(request):
         include_data = []
         bool_set = sm.get_strParam2arrayParam(param_dict['plot_liter'])
         station = None
-        # TODO switch or channel to and, switch and sat to or
         for i, selected in enumerate(bool_set):
             if selected:
                 try:

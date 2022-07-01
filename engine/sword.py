@@ -131,64 +131,65 @@ class SWORD():
         #plt.gca().yaxis.set_major_locator(plt.NullLocator())
 
     def draw_plot(self, draw_list, auroral_list, delta=1, draw_station=None):
-        # long_set
-        """short_set, long_set = False, False
-        if len(draw_list) == 1:
-            short_set = True
-        elif len(draw_list) > 1:
-            long_set = True
+        station_name = [k for k in draw_station.keys()][0]
+        obs_value = draw_station[station_name]
 
-        #   отрисовка графика
-        if short_set:
-            fig = plt.figure(figsize=(15, 15))
-            #axs = host_subplot(111, axes_class=axisartist.Axes)
-            axs = fig.add_subplot(111)
-            axs.set_aspect('auto')
-        elif long_set:
-            fig, axs = plt.subplots(len(draw_list), figsize=(20, 10*len(draw_list)))
-        fig.subplots_adjust(right=0.8)"""
-        fig, axs = plt.subplots(ncols=1, nrows=len(draw_list), figsize=(15, 5*len(draw_list)),
+        sat_plot_color = {'A': 'g', 'B': 'k', 'C': 'b', 'AC': 'm', '|AC|': 'c'}
+        plot_count = len(draw_list)
+        if len(obs_value) > 0:
+            plot_count += 3
+        fig, axs = plt.subplots(ncols=1, nrows=plot_count, figsize=(15, 5*plot_count),
                                 constrained_layout=True)
-
+        liters = [sw_set[0].split('-')[1].split()[0] for i, sw_set in enumerate(draw_list)]
+        #j2_list_pos = np.where(liters == 'AC')
+        j2_list_pos = [ i for i in range(len(liters)) if liters[i]=='AC']
+        if len(j2_list_pos)> 0:
+            j2_list_pos = j2_list_pos[0]
+        else:
+            j2_list_pos = None
         for plot_num, sw_set in enumerate(draw_list):
             label, date_list, time_list, value, pos = sw_set
-            """if short_set:
+            sw_liter = label.split('-')[1].split()[0]
+            if len(draw_list) == 1 and len(obs_value) == 0:
                 host = axs
-            elif long_set:
-                host = axs[i]"""
-            if len(draw_list) == 1:
-                host = axs
+            elif len(draw_list) == 1 and len(obs_value) > 0:
+                host = axs[0]
             elif len(draw_list) > 1:
                 host = axs[plot_num]
-            #host.set_zorder(6)
             ax2 = host.twiny()
 
             #   main value plot
-            host.plot(np.arange(len(time_list)), value, c='k', label=label)
-            str_ticks = [decode_str_dt_param(date + 'T' + time).strftime('%H:%M:%S') for date, time in
-                         zip(date_list, time_list)]
-            date_ticks = np.array([[x, label] for x, label in zip(np.arange(len(time_list)), str_ticks)])
+            if sw_liter != 'AC':
+                host.plot(np.arange(len(time_list)), value, c=sat_plot_color[sw_liter], label=label, lw=2)
+            if (j2_list_pos != None and sw_liter in ['A', 'C']) or sw_liter == 'AC':
+                AC_value, AC_label = draw_list[j2_list_pos][3],  'swarm-AC (J₂) ' + draw_list[j2_list_pos][0].split('-')[1].split(' ')[1]
+                AC_value_upper_zero = AC_value.copy()
+                AC_value_upper_zero[np.where(AC_value < 0)] = np.nan
+                host.plot(np.arange(len(time_list)), AC_value, c='k', label=AC_label + ' (< 0)', lw=2)
+                host.plot(np.arange(len(time_list)), AC_value_upper_zero, c='m', label=AC_label + ' (>= 0)', lw=2)
 
-            solarcoord_pos = []
-            for i in range(len(date_list)):
+            # prepare dt ticks
+            dt_tick = []
+            for i, d in enumerate(date_list):
+                # solar_lat, solar_lon = sun_pos(dt)
+                # solarcoord_pos.append('%s  %.1f' % (lt.strftime('%H:%M:%S'), 90. - solar_lat))
                 dt = decode_str_dt_param(date_list[i] + 'T' + time_list[i])
                 lon = pos[i, 1]
-                solar_lon = get_solar_coord(dt, lon)
-                solar_lat, solar_lon = sun_pos(dt)
-                # solar_lt = np.rint(solar_lon/15)
                 lt = get_local_time(dt, lon)
-                # solarcoord_pos.append('%sh %.1f'%(lt.hour, solar_lon))
-                solarcoord_pos.append('%s  %.1f' % (lt.strftime('%H:%M:%S'), 90. - solar_lat))
-            coord_pos = np.array(
-                [str(lat) + '  ' + str(lon) for lat, lon in np.round(np.array(pos[:, :2]).astype(float), 2)])
+                dt_tick.append(dt.strftime('%H:%M:%S') + ' UT')
+                dt_tick.append('\n' +lt.strftime('%H:%M:%S') + ' LT')
+            dt_tick = np.array(dt_tick).astype(str)
+            dt_tick = np.array([''.join(x) for x in zip(dt_tick[0::2], dt_tick[1::2])])
+            date_ticks = np.array([[x, label] for x, label in zip(np.arange(len(time_list)), dt_tick)])
 
+            # prepare GEO coord ticks (top)
             # pos_ticks = np.array([[x, y_label] for x, y_label in zip(np.arange(len(time_list)), coord_pos)])
             # magpos_ticks = np.array([[x, y_label] for x, y_label in zip(np.arange(len(time_list)), magcoord_pos)])
-
+            coord_pos = np.array([[lat, lon] for lat, lon in np.round(np.array(pos[:, :2]).astype(float), 2)])
             coord_ticks = []
-            for sol, geo in zip(solarcoord_pos, coord_pos):
-                coord_ticks.append(str(sol))
-                coord_ticks.append('\n\n' + str(geo))
+            for lat, lon in coord_pos:
+                coord_ticks.append(str(lat))
+                coord_ticks.append('\n' + str(lon))
             coord_ticks = np.array(coord_ticks).astype(str)
             coord_ticks = np.array([''.join(x) for x in zip(coord_ticks[0::2], coord_ticks[1::2])])
             coordtick_locations = np.arange(len(pos))
@@ -196,7 +197,6 @@ class SWORD():
             # decode from str to datetime format
             points_time = np.array([decode_str_dt_param(d + 'T' + t) for d, t in zip(date_list, time_list)],
                                    dtype='datetime64')
-
             if len(date_ticks) >= 12:
                 tick_count = 9
                 if points_time[-1] - points_time[0] < np.timedelta64(1, 'h'):  # отрисовка vlines раз в минуту
@@ -214,8 +214,7 @@ class SWORD():
                             line_idx.append(k)
                     date_ticks = date_ticks[line_idx]
                     nonnan_value = [x for x in value if not np.isnan(x)]
-                    host.vlines(x=line_idx, ymin=np.min(nonnan_value), ymax=np.max(nonnan_value), color='b',
-                                linestyle='--', alpha=.5, linewidths=1)
+                    #host.vlines(x=line_idx, ymin=np.min(nonnan_value), ymax=np.max(nonnan_value), color='b',linestyle='--', alpha=.5, linewidths=1)
                 else:
                     coord_ticks_arange = np.arange(0, len(coord_ticks),
                                                    int(len(coord_ticks) / tick_count))  # top xlabels tick
@@ -226,52 +225,20 @@ class SWORD():
 
 
             right_axes = []
-            if draw_station is not None:
-                right_axes.append(host.twinx)
+
             if len(auroral_list) > 0:
+                auroral_diff = auroral_list[plot_num][0]
+                auroral_mono = auroral_list[plot_num][1]
                 right_axes.append(host.twinx)
-
-            if draw_station is not None:
-                station_name = [k for k in draw_station.keys()][0]
-                obs_value = draw_station[station_name]
-                ax3 = host.twinx()
-                ax3.set_zorder(host.get_zorder() + 1)
-                ax3.set_ylabel("%s ground ground_station, nT" % station_name)
-
-
-                for col, vect_comp in enumerate(['N', 'E', 'Z', 'F']):
-                    ax3.plot(np.arange(len(obs_value)), obs_value[:, col], label='%s %s, nT' % (station_name, vect_comp))
-
-                obs_loc = get_superMAG_observ_loc(station_name)[:2]
-                p_in_p = get_position_near_point(pos, obs_loc, degr_radius=10)
-                p_in_p = [not elem for elem in p_in_p]
-                swarm_value_near_obs = value.copy()
-                swarm_value_near_obs[p_in_p] = np.nan
-
-                #print(ax3.get_zorder(), 'zordser')
-                #host.scatter(np.arange(len(time_list))[p_in_p], value[p_in_p], c='g', marker='+', label=label+' near obs', zorder=8)
-                host.plot(np.arange(len(time_list)), swarm_value_near_obs,  c='r',label=label+' near obs', zorder=ax3.get_zorder() + 1)
-                ax3.legend(loc=4)
-                ax3.grid(linestyle='--')
-                #ax3.set_zorder(host.get_zorder() - 1)
-            # auroral oval
-            if len(auroral_list) > 0:
-                print(len(auroral_list), 'i=', plot_num)
+                #print(len(auroral_list), 'i=', plot_num)
                 ax4 = host.twinx()
                 ax4.set_ylabel("OVATION auroral oval near %s, ergs/cm²" % label)
-                ax4.plot(np.arange(len(auroral_list[plot_num])), auroral_list[plot_num], c='b',
-                         label='auroral oval near ' + label)
-
-
-                if draw_station is not None:
-                    #new_fixed_axis = ax4.get_grid_helper().new_fixed_axis
-                    #ax4.axis["right"] = new_fixed_axis(loc="right", axes=ax4, offset=(60, 0))
-                    ax4.spines["right"].set_position(("axes", 1.1))
-                    ax4.yaxis.tick_right()
-                    ax4.yaxis.set_label_position("right")
-                    ax4.spines["right"].set_visible(True)
-                ax4.legend(loc=4)
-                ax4.grid(linestyle='--')
+                ax4.plot(np.arange(len(auroral_diff)), auroral_diff, c='b',
+                         label='auroral oval diff near ' + label, lw=2)
+                ax4.plot(np.arange(len(auroral_mono)), auroral_mono, c='y',
+                         label='auroral oval mono near ' + label, lw=2)
+                ax4.legend(loc=2)
+                ax4.grid(linestyle='-')
                 ax4.set_zorder(host.get_zorder() + 1)
 
             if 'fac' in label:
@@ -281,33 +248,58 @@ class SWORD():
             host.set_ylabel(label)
             host.set_xticks(np.array(date_ticks[:, 0]).astype(int))
             host.set_xticklabels(date_ticks[:, 1], rotation=40)
+            ax2.grid(False)
             ax2.set_xlim(host.get_xlim())
             ax2.set_xticks(coordtick_locations[coord_ticks_arange])
             ax2.set_xticklabels(coord_ticks[coord_ticks_arange])
-            ax2.tick_params(axis='x', labelsize=8)
-            ax2.annotate("LT sunColat\n\nGEO lat lon", xy=(-0.03, 1.037), xycoords=ax2.transAxes, size=8)
+            ax2.tick_params(axis='x', labelsize=11, grid_alpha=0)
+            ax2.annotate("GEO lat\nGEO lon", xy=(-0.04, 1.037), xycoords=ax2.transAxes, size=11)
 
             #https://stackoverflow.com/questions/20532614/multiple-lines-of-x-tick-labels-in-matplotlib
-            host.grid()
-            host.xaxis.grid(False)
-            ax2.grid()
+            #ax2.xaxis.grid(False)
+            #ax2.grid(False)
+            host.grid(linestyle='--')
             host.legend()
 
+        # plot superMag station value
+        if len(obs_value) > 0:
+            station_plot_color = {'X': 'g', 'Y': 'k', 'Z': 'b'}
+            label, date_list, time_list, value, pos = draw_list[0]
+
+            try:
+                obs_loc = get_superMAG_observ_loc(station_name)[:2]
+                p_in_p = get_position_near_point(pos, obs_loc, degr_radius=10)
+                switch_idxs = []
+                last_bool_value = p_in_p[0]
+                for i, b in enumerate(p_in_p):
+                    if b != last_bool_value:
+                        switch_idxs.append(i)
+                        last_bool_value = b
+            except:
+                switch_idxs = []
+            for col, vect_comp in enumerate(['X', 'Y', 'Z']):
+                ax = axs[col - 3]
+                ax.set_ylabel("SuperMAG ground station %s, nT" % station_name)
+                ax.plot(np.arange(len(obs_value)), obs_value[:, col], lw=2, c=station_plot_color[vect_comp], label='%s %s, nT' % (station_name, vect_comp))
+
+                if len(switch_idxs)>=2:
+                    ax.vlines(x=switch_idxs, ymin=np.min(obs_value[:, col]), ymax=np.max(obs_value[:, col]), color='k',
+                              linestyle='--', alpha=.7, linewidths=1)
+                    window_idx = switch_idxs[0] + int((switch_idxs[1] - switch_idxs[0]) / 2)
+                    center_y_axis = np.min(obs_value[:, col]) +  (np.max(obs_value[:, col])-np.min(obs_value[:, col]))/2
+                    style = dict(size=10, color='gray')
+                    ax.text(window_idx, center_y_axis, "SWARM flight window", ha='center', **style)
+
+                ax.set_xticks(np.array(date_ticks[:, 0]).astype(int))
+                ax.set_xticklabels(date_ticks[:, 1], rotation=40)
+                ax.legend(loc=4)
+                ax.grid(linestyle='--')
 
         if draw_list[0][1][0] != draw_list[0][1][-1]:  # first date != second date
             dt_from, dt_to = decode_str_dt_param(draw_list[0][1][0] + 'T' + draw_list[0][2][0]), decode_str_dt_param(
                 draw_list[0][1][-1] + 'T' + draw_list[0][2][-1])
             fig.suptitle('from %s to %s' % (dt_from, dt_to), fontsize=16)
         else:
-            """
-            date_str_list = np.unique(draw_list[0][1])
-            date_count_list = np.zeros(len(date_str_list))
-            for i, d_str in enumerate(date_str_list):
-                date_where = len(np.where(draw_list[0][1]==d_str))
-                print(date_where)
-                date_count_list[i] = date_where
-            fig.suptitle(date_str_list[np.argmax(date_count_list)], fontsize=16)
-            """
             fig.suptitle(draw_list[0][1][0], fontsize=16)
 
         plt.grid(True)
@@ -319,9 +311,10 @@ class SWORD():
 
         # swarm path -----------------
         if self.proj_type != 'miller':
-            self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4)
+            self.ax.plot(points[:, 1], points[:, 0], 'k--', zorder=8, lw=1, alpha=0.4, transform=ccrs.Geodetic())
         else:
-            self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=self.ax.projection)
+            #self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=self.ax.projection)
+            self.ax.plot(points[:, 1], points[:, 0], 'k--', zorder=8, lw=1, alpha=0.4, transform=ccrs.Geodetic())
 
         #self.ax.plot(X, Y, 'k--', zorder=8, lw=1, alpha=0.4, transform=ccrs.Geodetic())
 
@@ -361,8 +354,8 @@ class SWORD():
                                 # self.ax.annotate(text, xytext=(x2, y2), xy=(x1, y1), size=10, fontsize=12)
                             else:
                                 self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
-                        else:
-                            self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
+                        #else:
+                        #    self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
 
                     except Exception as e:
                         print(e)
@@ -514,7 +507,7 @@ class SWORD():
         cmap_args = self.draw_colorbar(z, cmap, 'ionomodel %s %s' % (type[0], type[1]) +unit, cb_type=cb_type)
         self.ax.contourf(X, Y, Vi, cmap=cmap, norm=cmap_args['norm'], transform=ccrs.PlateCarree(), alpha=0.75)
 
-    def draw_avroral_oval(self, surf_data, hemisphere='north'):
+    def draw_avroral_oval(self, surf_data, hemisphere='north', atype='diff'):
         """x, y, z = surf_data[:, 0], surf_data[:, 1], surf_data[:, 2]
         # grid the data.
         xi = np.linspace(x.min()-1, x.max()+1, 200)
@@ -531,7 +524,8 @@ class SWORD():
         #nonnan_values = flux_value[not np.isnan(flux_value)]
 
         flux_value[np.isnan(flux_value)] = 0
-        cmap_args = self.draw_colorbar(flux_value, cmap=plt.get_cmap('cool'), label='OVATION auroral oval diffuse %s_hemi ergs/cm²' % hemisphere, cb_type=cb_type)
+        cmap_args = self.draw_colorbar(flux_value, cmap=plt.get_cmap('cool'),
+                                       label='OVATION auroral oval %s %s_hemi ergs/cm²' % (atype ,hemisphere), cb_type=cb_type)
         #cmap.set_under('white', 0)
 
         levels = np.linspace(0.25, 4, 20)
@@ -559,10 +553,16 @@ class SWORD():
                 vmin, vmax = -1 * np.abs(values.min()), np.abs(values.min())
             else:
                 vmin, vmax = -1 * np.abs(values.max()), np.abs(values.max())
-            if ('FAC' in label) and vmax > 10:
-                bounds = [vmin, -5.0, -4., -3., -2., -1., 0, 1., 2., 3., 4., 5., vmax]
-            elif ('d' in label) and vmax > 50:
-                bounds = [vmin, -100.0, -75., -50., -25.,  0,  25., 50., 75., 100., vmax]
+            if ('FAC' in label):
+                if vmax < 5:
+                    bounds = [-6, -5.0, -4., -3., -2., -1., 0, 1., 2., 3., 4., 5., 6]
+                else:
+                    bounds = [vmin, -5.0, -4., -3., -2., -1., 0, 1., 2., 3., 4., 5., vmax]
+            elif ('d' in label):
+                if vmax < 50:
+                    bounds = [-100, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 100]
+                else:
+                    bounds = [vmin, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, vmax]
             else:
                 delta = vmax/5
                 bounds = [x for x in np.arange(vmin, vmax+delta, delta)]
@@ -601,13 +601,10 @@ class SWORD():
         else:
             vmin, v_max = values.min(), values.max()
             #vmin, v_max = values[np.where(values>vmin)].min(), values[np.where(values<v_max)].max()
-
             norm = plt.Normalize(vmin=vmin, vmax=v_max)
             cm = plt.cm.ScalarMappable(cmap='jet', norm=norm)
             # cm = plt.cm.ScalarMappable(cmap=cmap)
             cmap_args = dict(cmap='jet', norm=norm)
-
-
 
         cm._A = []
         if self.proj_type == 'miller':
@@ -615,10 +612,12 @@ class SWORD():
         else:
             #rotation, orientation, pad, label_pad = 270, 'vertical', 0.015, -0.1
             rotation, orientation, pad, label_pad = 0, 'horizontal', 0.01, None
-
         #   https://stackoverflow.com/questions/15908371/matplotlib-colorbars-and-its-text-labels
-        #cb = plt.colorbar(cm, ax=self.ax, shrink=0.4, orientation=orientation, fraction=0.1, pad=0.0025)
-        cb = plt.colorbar(cm, ax=self.ax, orientation=orientation, shrink=0.35, fraction=0.05, pad=pad)
+        if cb_type == 'zero_center' and ('d' in label or 'FAC' in label):
+            cb = plt.colorbar(cm, ax=self.ax, orientation=orientation, shrink=0.35, fraction=0.05, pad=pad, ticks=[int(v) for v in bounds])
+            cb.ax.set_yticklabels([int(v) for v in bounds])
+        else:
+            cb = plt.colorbar(cm, ax=self.ax, orientation=orientation, shrink=0.35, fraction=0.05, pad=pad)
         cb.set_label(label, labelpad=label_pad, rotation=rotation)
         return cmap_args
 
@@ -722,7 +721,7 @@ class SWORD():
     def fig_to_PIL_image(self, name='1'):
 
         buf = io.BytesIO()
-        plt.savefig(buf, format='jpeg', dpi=300)
+        plt.savefig(buf, format='jpeg', dpi=400)
         buf.seek(0)
         im = Image.open(buf)
         im.save(STATIC_OS_PATH +'/media/tmp/%s.jpg' % name)

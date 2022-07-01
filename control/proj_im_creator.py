@@ -97,8 +97,8 @@ def get_proj_image(swarm_info, proj_type,
 
     #   отрисовка на проекции аврорального овала
     if draw_auroral_s is not None:
-        x, y, z, yxz = get_auroral_flux(draw_auroral_s, hemishpere='S')  # f(dt)
-        sword.draw_avroral_oval([x,y,z], hemisphere='south')
+        x, y, z, yxz = get_auroral_flux(draw_auroral_s['date'], hemishpere='S', atype=draw_auroral_s['type'])  # f(dt)
+        sword.draw_avroral_oval([x,y,z], hemisphere='south', atype=draw_auroral_s['type'])
         #sword.draw_mag_coord_lines(swarm_date[0])
         ax_label += ' auroralS'
         d2txt.DATA['auroral_s'] = {}
@@ -106,8 +106,8 @@ def get_proj_image(swarm_info, proj_type,
         d2txt.DATA['auroral_s']['lon'] = yxz[:, 1]
         d2txt.DATA['auroral_s']['diff_ergs/cm^2'] = yxz[:, 2]
     if draw_auroral_n is not None:
-        x, y, z, yxz = get_auroral_flux(draw_auroral_n, hemishpere='N')  # f(dt)
-        sword.draw_avroral_oval([x,y,z], hemisphere='north')
+        x, y, z, yxz = get_auroral_flux(draw_auroral_n['date'], hemishpere='N', atype=draw_auroral_n['type'])  # f(dt)
+        sword.draw_avroral_oval([x,y,z], hemisphere='north', atype=draw_auroral_n['type'])
         #sword.draw_mag_coord_lines(swarm_date[0])
         ax_label += ' auroralN'
         d2txt.DATA['auroral_n'] = {}
@@ -273,6 +273,18 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
     auroral_list = []
     d2txt = Data2Text()
 
+    obs_value = []
+    if ground_station is not None:
+        try:
+            position_list, date_list, time_list = swarm_sets[0][1], swarm_sets[0][2], swarm_sets[0][3]
+            # N, E, C, F
+            obs_value = get_sMAGstation_value_by_time(date_list, time_list, delta=delta, station=ground_station)
+            d2txt.DATA[ground_station] = {}
+            for col, vect_comp in enumerate(['N', 'E', 'Z', 'F']):
+                d2txt.DATA[ground_station][vect_comp + '_nT'] = obs_value[:, col]
+        except:
+            pass
+
     for i, swarm_set in enumerate(swarm_sets):
         position_list, date_list, time_list = swarm_set[1], swarm_set[2], swarm_set[3]
         d2txt.annotate = 'from %s to %s' % (date_list[0]+'T'+time_list[0], date_list[-1]+'T'+time_list[-1])
@@ -281,6 +293,8 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
             shape_size = 1
         else:
             shape_size = np.array(swarm_set[4]).shape[1]
+
+
 
         d2txt.DATA['SWARM_dt'] = [date+'T'+time for date, time in zip(date_list, time_list)]
         #   append value[channel] or value
@@ -297,6 +311,7 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
                 value_key = 'SWARM_%s_' % label.rsplit('-')[1][0] + ['N', 'E', 'C', 'F'][channel] + '_nT'
 
             draw_list.append([label, date_list, time_list, value, position_list])
+
             d2txt.DATA['SWARM_GEOpos'] = {}
             d2txt.DATA['SWARM_GEOpos']['lat'] = position_list[:, 0]
             d2txt.DATA['SWARM_GEOpos']['lon'] = position_list[:, 1]
@@ -313,7 +328,6 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
                     value_key = 'SWARM_%s_' % label.rsplit('-')[1][0] + '_FAC_DMA_anomaly'
                 else:
                     value_key = 'SWARM_%s_' % label.rsplit('-')[1][0] + 'FAC' + '_nT'
-                print(label, 'label plot')
                 draw_list.append([label, date_list, time_list, value, position_list])
                 d2txt.DATA['SWARM_GEOpos'] = {}
                 d2txt.DATA['SWARM_GEOpos']['lat'] = position_list[:, 0]
@@ -331,6 +345,8 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
                     else:
                         value_key = 'SWARM_%s_' % label.rsplit('-')[1][0] + ['N', 'E', 'C', 'F'][ch] + '_nT'
                     draw_list.append([label, date_list, time_list, value, position_list])
+                    if len(obs_value) > 0:
+                        draw_list.append([label, date_list, time_list, value, position_list])
                     d2txt.DATA['SWARM_GEOpos'] = {}
                     d2txt.DATA['SWARM_GEOpos']['lat'] = position_list[:, 0]
                     d2txt.DATA['SWARM_GEOpos']['lon'] = position_list[:, 1]
@@ -338,18 +354,13 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
                     d2txt.DATA[value_key] = np.ravel(value)
 
         if auroral:
-            auroral_near_swarm = get_nearest_auroral_point_to_swarm(swarm_set)
-            auroral_list.append(auroral_near_swarm)
-            d2txt.DATA['auroral_near_diff_ergs/cm^2'] = auroral_near_swarm
-        if ground_station is not None:
-            try:
-                # N, E, C, F
-                obs_value = get_sMAGstation_value_by_time(date_list, time_list, delta=delta, station=ground_station)
-                d2txt.DATA[ground_station] = {}
-                for col, vect_comp in enumerate(['N', 'E', 'Z', 'F']):
-                    d2txt.DATA[ground_station][vect_comp+'_nT'] = obs_value[:, col]
-            except:
-                obs_value = []
+            auroral_near_swarm_diff = get_nearest_auroral_point_to_swarm(swarm_set, atype='diff')
+            auroral_near_swarm_mono = get_nearest_auroral_point_to_swarm(swarm_set, atype='mono')
+            auroral_list.append([auroral_near_swarm_diff, auroral_near_swarm_mono])
+            d2txt.DATA['%s_auroral_near_diff_ergs/cm^2' % label] = auroral_near_swarm_diff
+            d2txt.DATA['%s_auroral_near_mono_ergs/cm^2' % label] = auroral_near_swarm_mono
+
+
 
     status = 1
     if status == 1:
