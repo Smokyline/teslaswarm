@@ -275,15 +275,12 @@ def get_plot_im(swarm_sets, labels, auroral, channel, delta, measure_mu, ground_
 
     obs_value = []
     if ground_station is not None:
-        try:
-            position_list, date_list, time_list = swarm_sets[0][1], swarm_sets[0][2], swarm_sets[0][3]
-            # N, E, C, F
-            obs_value = get_sMAGstation_value_by_time(date_list, time_list, delta=delta, station=ground_station)
-            d2txt.DATA[ground_station] = {}
-            for col, vect_comp in enumerate(['N', 'E', 'Z', 'F']):
-                d2txt.DATA[ground_station][vect_comp + '_nT'] = obs_value[:, col]
-        except:
-            pass
+        position_list, date_list, time_list = swarm_sets[0][1], swarm_sets[0][2], swarm_sets[0][3]
+        # N, E, C, F
+        obs_value = get_sMAGstation_value_by_time(date_list, time_list, delta=delta, station=ground_station)
+        d2txt.DATA[ground_station] = {}
+        for col, vect_comp in enumerate(['N', 'E', 'Z', 'F']):
+            d2txt.DATA[ground_station][vect_comp + '_nT'] = obs_value[:, col]
 
     for i, swarm_set in enumerate(swarm_sets):
         position_list, date_list, time_list = swarm_set[1], swarm_set[2], swarm_set[3]

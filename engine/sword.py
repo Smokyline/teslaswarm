@@ -157,11 +157,10 @@ class SWORD():
             elif len(draw_list) > 1:
                 host = axs[plot_num]
             ax2 = host.twiny()
-
             #   main value plot
             if sw_liter != 'AC':
                 host.plot(np.arange(len(time_list)), value, c=sat_plot_color[sw_liter], label=label, lw=2)
-            if (j2_list_pos != None and sw_liter in ['A', 'C']) or sw_liter == 'AC':
+            if ((j2_list_pos != None and sw_liter in ['A', 'C']) or sw_liter == 'AC') and label.split('-')[1].split(' ')[1] == 'fac':
                 AC_value, AC_label = draw_list[j2_list_pos][3],  'swarm-AC (J₂) ' + draw_list[j2_list_pos][0].split('-')[1].split(' ')[1]
                 AC_value_upper_zero = AC_value.copy()
                 AC_value_upper_zero[np.where(AC_value < 0)] = np.nan
@@ -274,7 +273,7 @@ class SWORD():
                     if b != last_bool_value:
                         switch_idxs.append(i)
                         last_bool_value = b
-            except:
+            except :
                 switch_idxs = []
             for col, vect_comp in enumerate(['X', 'Y', 'Z']):
                 ax = axs[col - 3]
@@ -288,7 +287,7 @@ class SWORD():
                     center_y_axis = np.min(obs_value[:, col]) +  (np.max(obs_value[:, col])-np.min(obs_value[:, col]))/2
                     style = dict(size=10, color='gray')
                     ax.text(window_idx, center_y_axis, "SWARM flight window", ha='center', **style)
-
+                ax.set_xlim(axs[0].get_xlim())
                 ax.set_xticks(np.array(date_ticks[:, 0]).astype(int))
                 ax.set_xticklabels(date_ticks[:, 1], rotation=40)
                 ax.legend(loc=4)
