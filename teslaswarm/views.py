@@ -6,10 +6,12 @@ from teslaswarm import settings
 from django.http import HttpResponse
 import os
 from tools.dt_foo import decode_str_dt_param
-from teslaswarm.settings import STATIC_OS_PATH
+from teslaswarm.settings import STATIC_OS_PATH, ALLOWED_HOSTS
 from control.request_control import teslaswarmControl
+from engine.swarm_animation import SwarmAnimRender
 
 TeslaSwarm = teslaswarmControl()
+Swarm_anim = SwarmAnimRender
 
 def get_image_page(request):
     # main backend foo
@@ -250,3 +252,67 @@ def test(request):
 
 def get_homepage(request):
     return render(request, 'index.html')
+
+
+def render_swarm_anim(request):
+
+    # yield render_to_response('send_mail.html',)
+
+    original_umask = os.umask(0)
+    param_name = [
+        'swchar',
+        'mod',
+        'timeFrom',
+        'timeTo',
+        'channel',
+        'delta',
+        'mailTo']
+    param_dict = {}
+    for p in param_name:
+        param_dict[p] = request.GET[p]
+    dt_from, dt_to = decode_str_dt_param(
+        param_dict['timeFrom']), decode_str_dt_param(
+        param_dict['timeTo'])
+    print(param_dict)
+    r = Swarm_anim(dt_from=dt_from, dt_to=dt_to, LT_interval=[None], delta=int(param_dict['delta']),
+               mod=param_dict['mod'], swarm_char=param_dict['swchar'],
+               channel=int(param_dict['channel']), frame_step=1)
+    print('data downloaded from server...')
+    led = r.render_swarm_video()
+    #link = 'http://%s/static/videos/%s.webm' % (ALLOWED_HOSTS[0], led)
+    link = 'http://%s/static/videos/%s.webm' % ('http://127.0.0.1:8000', led)
+
+    channels = ['North', 'East', 'Down', 'Vector modulus']
+    if param_dict['mod'] == 'vector':
+        swarm_sat = 'Swarm A & Swarm C'
+        mod = 'Difference vector magnitude'
+    elif param_dict['mod'] == 'mera':
+        swarm_sat = 'Swarm %s' % str(param_dict['swchar']).upper()
+        mod = 'Measure of anomalies'
+    elif param_dict['mod'] == 'fac2':
+        swarm_sat = 'Swarm %s' % str(param_dict['swchar']).upper()
+        mod = 'Time series of field-aligned currents'
+    channel = channels[int(param_dict['channel'])]
+    delta = param_dict['delta']
+
+    mail_text = "%s %s\nComponent: %s\nData period from: %s\nto: %s\nAveraging interval, seconds: %s\n\nlink to video: %s\nPlease, save the video If you want to use it in the future." % (
+        mod, swarm_sat, channel, param_dict['timeFrom'], param_dict['timeTo'], delta, link
+    )
+
+    send_mail('Swarm map', mail_text, 'swarm@gcras.ru', [
+              param_dict['mailTo']], fail_silently=False)
+    os.umask(original_umask)
+
+    return render(request, 'send_mail.html')
+
+def swarm_anim_form(request):
+    return render(request, 'dataserv-swarmtracks.html')
+
+
+def show_mail_page(request):
+
+    return render(request, 'send_mail.html')
+
+def show_video(request, led):
+    led = '/static/media/videos/%s.webm' % led
+    return render(request, 'show_video.html', {'led': led})

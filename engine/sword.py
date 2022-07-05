@@ -343,8 +343,9 @@ class SWORD():
                         target_x, target_y = target_x * m, target_y * m
                         #target_x, target_y = (x2 - x1) * 7, (y2 - y1) * 7
 
-                        text = str(point_time) + '\nLT:%s' % get_local_time(point_time.astype(datetime.datetime),
-                                                                            points[k, 1])
+
+                        text = point_time.astype(datetime.datetime).strftime('%H:%M') + ' UT'
+
                         #self.ax.arrow(x1, y1, (x2 - x1) * 7, (y2 - y1) * 7, head_width=0.75, head_length=0.25, zorder=5, alpha=.65)
                         #self.ax.arrow(x1, y1, target_x, target_y, head_width=0.75, head_length=0.25, zorder=5,
                         self.ax.arrow(x1, y1, target_x, target_y, head_width=0.75, head_length=0.25, zorder=5, alpha=.65)
@@ -354,11 +355,16 @@ class SWORD():
                         if annotate_and_long_range or annotate:
                             if extend_bool:
                                 if self.extend[0] < x_deg[k] < self.extend[1] and self.extend[2] < y_deg[k] < self.extend[3]:
-                                    self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
+                                    self.ax.text(x1, y1, text, fontsize=12, clip_on=True, zorder=5, transform=self.ax.projection)
                                 # self.ax.annotate(text, xytext=(x2, y2), xy=(x1, y1), size=10, fontsize=12)
                             else:
-                                self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
-                        #else:
+                                self.ax.text(x1, y1, text, fontsize=6, clip_on=True, zorder=5, transform=self.ax.projection)
+                        elif extend_bool:
+                            # D M  H:M  LT
+                            text = point_time.astype(datetime.datetime).strftime('%d-%m %H:%M') + '\nLT:%s' % get_local_time(point_time.astype(datetime.datetime),points[k, 1]).strftime('%H:%M')
+                            self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
+
+                    #else:
                         #    self.ax.text(x1, y1, text, fontsize=5, clip_on=True, zorder=5, transform=self.ax.projection)
 
                     except Exception as e:

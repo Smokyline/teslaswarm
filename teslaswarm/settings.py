@@ -136,6 +136,8 @@ print(STATIC_OS_PATH)
 ]
 print('django.settings STATICFILES_DIRS', STATICFILES_DIRS)"""
 
+
+
 CHAOS_PATH = os.path.join(BASE_DIR, 'chaos7_model/data/CHAOS-7.mat')
 #CHAOS_PATH = os.path.join('C:\\Users\\ivan\\YandexDisk\\workspace\\py\\teslaswarm\\chaos7_model\\data\\CHAOS-7.mat')
 
@@ -147,8 +149,18 @@ print('django.settings ACTIVATE_THIS_PATH', ACTIVATE_THIS_PATH)
 
 if platform.system() == 'Linux':
     CDF_LIB_PATH = "/usr/local/cdf/lib/"
+    FFMPEG_PATH = '/usr/bin/ffmpeg'
 elif platform.system() == 'Darwin':
     CDF_LIB_PATH = '/Applications/cdf/cdf38_0-dist/lib/'
+    FFMPEG_PATH = '/usr/bin/ffmpeg'
 elif platform.system() == 'Windows':
     CDF_LIB_PATH = "C:\\CDF_Distribution\\cdf38_0-dist\\lib"
+    #FFMPEG_PATH = 'C:\\ffmpeg\\bin\\ffmpeg'
+    FFMPEG_PATH = 'ffmpeg'
 os.environ["CDF_LIB"] = CDF_LIB_PATH
+
+EMAIL_HOST = 'mail.gcras.ru'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "swarm@gcras.ru"
+EMAIL_HOST_PASSWORD = "ksdi#jifdjiFDopr"
+EMAIL_USE_TLS = True
