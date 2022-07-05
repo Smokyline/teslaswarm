@@ -279,8 +279,8 @@ def render_swarm_anim(request):
                channel=int(param_dict['channel']), frame_step=1)
     print('data downloaded from server...')
     led = r.render_swarm_video()
-    #link = 'http://%s/static/videos/%s.webm' % (ALLOWED_HOSTS[0], led)
-    link = 'http://%s/static/videos/%s.webm' % ('http://127.0.0.1:8000', led)
+    link = 'http://%s/static/videos/%s.webm' % (ALLOWED_HOSTS[0], led)
+    #link = 'http://%s/static/videos/%s.webm' % ('http://127.0.0.1:8000', led)
 
     channels = ['North', 'East', 'Down', 'Vector modulus']
     if param_dict['mod'] == 'vector':
