@@ -27,8 +27,8 @@ urlpatterns = [
     path('request/', get_image_page),
     # swarm anim
     path('videos/(\d+).webm/$', show_video),
-    path('mail/', show_mail_page),
+    path('swarm/mail/', show_mail_page),
     path('swarm/swarmAnim', render_swarm_anim),
-    path('swarm/', swarm_anim_form),
+    path('swarm/dataserv-swarmtracks.html/', swarm_anim_form),
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
