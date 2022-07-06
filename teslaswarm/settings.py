@@ -152,6 +152,7 @@ print('django.settings ACTIVATE_THIS_PATH', ACTIVATE_THIS_PATH)
 if platform.system() == 'Linux':
     CDF_LIB_PATH = "/usr/local/cdf/lib/"
     FFMPEG_PATH = '/usr/bin/ffmpeg'
+    f_psw = open(Path(r"/home/ivan/mail_psw.txt"))
 elif platform.system() == 'Darwin':
     CDF_LIB_PATH = '/Applications/cdf/cdf38_0-dist/lib/'
     FFMPEG_PATH = '/usr/bin/ffmpeg'
