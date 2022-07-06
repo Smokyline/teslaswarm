@@ -3,12 +3,14 @@ import datetime
 import numpy as np
 import subprocess
 import time
-from teslaswarm.settings import BASE_DIR
+from teslaswarm.settings import BASE_DIR, STATIC_OS_PATH
 from tools.data_foo import *
 import platform
 import math
 from spacepy import coordinates as coord
 from spacepy.time import Ticktock
+import matplotlib.pyplot as plt
+import time
 def write_param(param_dict):
     keys = ['bz', 'by', 'doy', 'kp', 'f107', 'ut']
     format_param = [' Bz=    v', ' By=    v', ' DOY=    v', ' Kp=    v', ' F107=  v', ' UT=    v']
@@ -108,8 +110,40 @@ def mag_crt_to_geo_shp(r, lat, lon, dt):
     new_coord = np.array(cvals.convert('GEO', 'sph').data)[0]
     return [new_coord[2], new_coord[1]]  # mag lon, lat
 
+def rect_to_geo(x, y, hem, UT, dt):
+    if hem == 'n':
+        THETA_P, PHI_P  = 213.00, 85.54
+    else:
+        THETA_P, PHI_P = 223., -64.24
+    lon_to360 = lambda x: (x - 180) % 360 - 180  # -180 180 to 0 360
+    lon_to180 = lambda x: (x + 180) % 360 - 180  # 0 360 to -180 180
 
-def get_ionomodel_surf_file(param_dict, dt):
+    pollonlat = np.array([cart2polar(x, y) for x, y in zip(x, y)])
+    lat, lon = pollonlat[:, 0], pollonlat[:, 1]
+    lat = 90. - lat
+    geo_latlon = geomag2geo(latlon=np.array([lat, lon]).T, THETA=THETA_P, PHI=PHI_P)
+    lat, lon = geo_latlon[:, 0], geo_latlon[:, 1]
+
+    #seconds_per_day = 24 * 60 * 60.0
+    #ut_sec = float(param_dict['ut'])*(60 * 60.0)
+    ut_h = int(float(UT))
+    if float(UT) == 0.:
+        ut_m = int((float(UT)*10)*60)
+    else:
+        ut_m = int((float(UT)%ut_h)*60)
+    dt_model = datetime.datetime(dt.year, dt.month, dt.day, ut_h, ut_m)
+    midnight_lat, midnight_lon = sun_pos(dt_model)
+
+    #print(midnight_lon, 'midn lon')
+    lon = midnight_lon + lon_to360(lon)
+    for i in range(len(lon)):
+        if lon[i] < 0:
+            lon[i] = 360 + lon[i]
+        elif lon[i] > 360:
+            lon[i] = lon[i] - 360
+    return lon, lat
+
+def get_ionomodel_surf_file(param_dict, dt, polar=False):
     # https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2005JA011465
     write_param(param_dict)     # dict to file
     run_exe_program()   # run wine
@@ -125,35 +159,75 @@ def get_ionomodel_surf_file(param_dict, dt):
     x = xyz_array[:, 0]
     y = xyz_array[:, 1]
     value = xyz_array[:, 2]
-
-    if file_name[0] == 'n':
-        THETA_P, PHI_P  = 213.00, 85.54
+    if polar:
+        return np.array([x, y, value]).T
     else:
-        THETA_P, PHI_P = 223., -64.24
-    lon_to360 = lambda x: (x - 180) % 360 - 180  # -180 180 to 0 360
-    lon_to180 = lambda x: (x + 180) % 360 - 180  # 0 360 to -180 180
+        lon, lat = rect_to_geo(x, y, hem=file_name[0], UT=param_dict['ut'], dt=dt)
+        return np.array([lon, lat, value]).T
 
-    pollonlat = np.array([cart2polar(x, y) for x, y in zip(x, y)])
-    lat, lon = pollonlat[:, 0], pollonlat[:, 1]
-    lat = 90. - lat
-    geo_latlon = geomag2geo(latlon=np.array([lat, lon]).T, THETA=THETA_P, PHI=PHI_P)
-    lat, lon = geo_latlon[:, 0], geo_latlon[:, 1]
 
-    #seconds_per_day = 24 * 60 * 60.0
-    #ut_sec = float(param_dict['ut'])*(60 * 60.0)
-    ut_h = int(float(param_dict['ut']))
-    if float(param_dict['ut']) == 0.:
-        ut_m = int((float(param_dict['ut'])*10)*60)
+def draw_map(xyz, type, hem):
+
+    x = xyz[:, 0]
+    y = xyz[:, 1]
+    value = xyz[:, 2]
+
+    # make the axes
+    f = plt.figure()
+    left, bottom, width, height = [0, 0.05, 1, 0.81]
+    ax = plt.axes([left, bottom, width, height])
+    pax = plt.axes([left, bottom, width, height],
+                   projection='polar',
+                   facecolor='none')
+    pax.set_yticks(np.arange(0, y.max(), 10))
+    if hem == 'n':
+        ylabels = np.arange(0, y.max(), 10).astype(int)
     else:
-        ut_m = int((float(param_dict['ut'])%ut_h)*60)
-    dt_model = datetime.datetime(dt.year, dt.month, dt.day, ut_h, ut_m)
-    midnight_lat, midnight_lon = sun_pos(dt_model)
+        ylabels = 180 - np.arange(0, y.max(), 10).astype(int)
 
-    print(midnight_lon, 'midn lon')
-    lon = midnight_lon + lon_to360(lon)
-    for i in range(len(lon)):
-        if lon[i] < 0:
-            lon[i] = 360 + lon[i]
-        elif lon[i] > 360:
-            lon[i] = lon[i] - 360
-    return np.array([lon, lat, value]).T
+    pax.set_yticklabels([str(d) + '$^\circ$' for d in ylabels], alpha=0.8, size=7)
+    pax.set_xticklabels([str(d) + '$^\circ$' for d in [270, 315, 0, 45, 90, 135, 180, 225]],
+                        alpha=0.8, size=7)
+    pax.grid(color='#b1b6c9', linestyle=':', linewidth=1, alpha=0.75)
+    ax.set_aspect(1)
+    ax.axis('Off')
+
+    # grid the data.
+
+    xi = np.linspace(x.min(), x.max(), 200)
+    yi = np.linspace(y.min(), y.max(), 200)
+    Vi = griddata((x, y), value, (xi[None, :], yi[:, None]), method='linear')  # create a uniform spaced grid
+    X, Y = np.meshgrid(xi, yi)
+
+    lin = np.max(np.abs(value)) + (np.max(np.abs(value)) / 10)
+    if type == 'sigma':
+        cmap = 'cool'
+        bounds = np.linspace(-0.5, lin, 50)
+    else:
+        cmap = 'seismic'
+        bounds = np.linspace(-1 * lin, lin, 80)
+
+    CS = ax.contourf(X, Y, Vi, alpha=0.60, cmap=cmap, levels=bounds, zorder=2, lw=0.5)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=bounds.min(), vmax=bounds.max()))
+    sm._A = []
+
+    CB = plt.colorbar(sm)
+    if type == 'potential':
+        CB.ax.set_title('kV', size=10)
+    elif type == 'fac':
+        CB.ax.set_title('μА/m²', size=10)
+    elif type == 'sigma':
+        CB.ax.set_title('Sm', size=10)
+
+    if lin < 1:
+        fmt = '%1.3f'
+    else:
+        fmt = '%1.f'
+    S = ax.contour(X, Y, Vi, 10, linewidths=0.5, colors='k', alpha=0.7)
+    plt.clabel(S, fontsize=5, inline=1, fmt=fmt)
+    image_name = 'ionomodel'+hem.upper()+'_'+type
+    image_name += str(int(round(time.time() * 1000)))
+    path = STATIC_OS_PATH + '/media/images/request/%s.jpg' % image_name
+    plt.savefig((path), dpi=450)
+    plt.close()
+    return image_name

@@ -22,13 +22,19 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('test/', test),
+
     # teslaswarm
-    path('teslaswarm/', get_homepage),
-    path('request/', get_image_page),
+    path('teslaswarm/', get_teslaswarm_homepage),
+    path('request/', get_teslaswarm),
+
     # swarm anim
     path('videos/(\d+).webm/$', show_video),
     path('swarm/mail/', show_mail_page),
-    path('swarm/swarmAnim', render_swarm_anim),
+    path('swarm/swarmAnim', get_swarmAnim),
     path('swarm/dataserv-swarmtracks.html/', swarm_anim_form),
+
+    # ionomidel
+    path('geomag/dataserv-ionomodel-ru/', ionomodel_form),
+    path('geomag/dataserv-ionomodel-ru/ionomodel', get_ionimodel),
 
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

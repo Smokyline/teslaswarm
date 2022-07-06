@@ -1,4 +1,5 @@
 import copy
+import datetime
 
 from django.core.mail import send_mail
 from django.shortcuts import render
@@ -9,11 +10,12 @@ from tools.dt_foo import decode_str_dt_param
 from teslaswarm.settings import STATIC_OS_PATH, ALLOWED_HOSTS
 from control.request_control import teslaswarmControl
 from engine.swarm_animation import SwarmAnimRender
+from tools.ionomodel_foo import get_ionomodel_surf_file, draw_map
 
 TeslaSwarm = teslaswarmControl()
 Swarm_anim = SwarmAnimRender
 
-def get_image_page(request):
+def get_teslaswarm(request):
     # main backend foo
 
     original_umask = os.umask(0)
@@ -250,11 +252,11 @@ def test(request):
     conda_env = os.environ['CONDA_DEFAULT_ENV']
     return render(request, 'test_page.html', {'env_name': conda_env})
 
-def get_homepage(request):
+def get_teslaswarm_homepage(request):
     return render(request, 'index.html')
 
 
-def render_swarm_anim(request):
+def get_swarmAnim(request):
 
     # yield render_to_response('send_mail.html',)
 
@@ -308,6 +310,30 @@ def render_swarm_anim(request):
 def swarm_anim_form(request):
     return render(request, 'dataserv-swarmtracks.html')
 
+def get_ionimodel(request):
+    param_name = ['type', 'hem', 'bz', 'f107', 'by', 'doy', 'kp', 'ut', 'out', 'img_w', 'img_h']
+    param_dict = {}
+    for p in param_name:
+        param_dict[p] = request.GET[p]
+
+    iono_xyz = get_ionomodel_surf_file(param_dict, datetime.date(2020, 1, 1), polar=True)
+    if param_dict['out'] == 'plot':
+        # show map
+        #img_name = draw_geo_map(data_type)
+        img_name = draw_map(iono_xyz, param_dict['hem'], param_dict['hem'])
+        path = 'http://%s/static/media/images/request' % ALLOWED_HOSTS[0]
+        return render(request, 'ionoimage_view.html', {'MEDIA_URL': path, 'IMAGE_NAME': img_name,
+                                                  'IMG_W': param_dict['img_w'], 'IMG_H': param_dict['img_h']})
+    else:
+        # ascii
+        str_array = ''
+        for x, y, z, in iono_xyz:
+            s = '%.2f %.2f %.2f\n' % (x, y, z)
+            str_array += s
+        return render(request,'print_ascii.html', {'XYZ': str_array})
+
+def ionomodel_form(request):
+    return render(request, 'dataserv-ionomodel-ru.html')
 
 def show_mail_page(request):
 
