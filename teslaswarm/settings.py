@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 import platform
+from pathlib import Path
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -153,14 +155,17 @@ if platform.system() == 'Linux':
 elif platform.system() == 'Darwin':
     CDF_LIB_PATH = '/Applications/cdf/cdf38_0-dist/lib/'
     FFMPEG_PATH = '/usr/bin/ffmpeg'
+    f_psw = open(Path(r"/home/ivan/mail_psw.txt"))
 elif platform.system() == 'Windows':
     CDF_LIB_PATH = "C:\\CDF_Distribution\\cdf38_0-dist\\lib"
     #FFMPEG_PATH = 'C:\\ffmpeg\\bin\\ffmpeg'
     FFMPEG_PATH = 'ffmpeg'
+    f_psw = open(Path(r"D:/workspace/mail_psw.txt"))
 os.environ["CDF_LIB"] = CDF_LIB_PATH
+
 
 EMAIL_HOST = 'mail.gcras.ru'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = "swarm@gcras.ru"
-EMAIL_HOST_PASSWORD = "ksdi#jifdjiFDopr"
+EMAIL_HOST_PASSWORD = f_psw.readline()
 EMAIL_USE_TLS = True
