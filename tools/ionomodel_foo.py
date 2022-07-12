@@ -11,6 +11,7 @@ from spacepy import coordinates as coord
 from spacepy.time import Ticktock
 import matplotlib.pyplot as plt
 import time
+from tools.coordinates_convert import cart2polar
 def write_param(param_dict):
     keys = ['bz', 'by', 'doy', 'kp', 'f107', 'ut']
     format_param = [' Bz=    v', ' By=    v', ' DOY=    v', ' Kp=    v', ' F107=  v', ' UT=    v']

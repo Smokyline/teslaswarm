@@ -135,7 +135,7 @@ def get_teslaswarm(request):
     if param_dict['auroral_n'] == 'true' or param_dict['auroral_s'] == 'true':
         auroral_date = decode_str_dt_param(param_dict['auroral_date'])
         #auroral_type = param_dict['auroral_type']
-        auroral_type = 'diff'
+        auroral_type = 'mono'
         if param_dict['auroral_n'] == 'true':
             auroral_n = True
         else:

@@ -26,8 +26,8 @@ def test_lib_load():
         import chaosmagpy
         import ovationpyme  # https://github.com/lkilcommons/OvationPyme https://github.com/lkilcommons/nasaomnireader   #https://spdf.gsfc.nasa.gov/pub/software/cdf/dist/cdf38_0/
         #import pyIGRF   # https://pypi.org/project/pyIGRF/#description #12
-        import igrf # 13
-
+        import igrf  # 13
+        import geopack  # pip3  https://github.com/tsssss/geopack
 
         print('all libraries successfully load')
     except Exception as e:

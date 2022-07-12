@@ -208,7 +208,8 @@ def get_proj_image(swarm_info, proj_type,
             vector_components = vector_subtraction[:, (0, 1)]  # dx, dy
 
             # legend_label = 'SWARM-%s_%s' % (model_name, ['dN', 'dE', 'dC', 'dF'][swarm_channel])
-            legend_label = 'SWARM_%s-%s $\\mathrm{d} H$' % (legend_label.rstrip(' ')[0], model_name)
+            #legend_label = 'SWARM_%s-%s $\\mathrm{d} H$' % (legend_label.rstrip(' ')[0], model_name)
+            legend_label = 'SWARM_%s-%s vector length [dN, dE]' % (legend_label.rstrip(' ')[0], model_name)
             key = 'SWARM_%s-%s_dH' % (legend_label.rstrip(' ')[0], model_name)
             d2txt.DATA[key] = {}
             d2txt.DATA[key]['dH_nT'] = swarm_values_in_poly
@@ -240,10 +241,12 @@ def get_proj_image(swarm_info, proj_type,
     # отрисовка точек измерений swarm в в указанном полигоне
     # если полигона нет - отрисовка всех (swarm_pos_in_poly = swarm_pos)
 
-    sword.draw_swarm_scatter(swarm_pos_in_poly, swarm_values_in_poly, custom_label=legend_label,
-                                 annotate=False)  # отрисовка значение точек на орбите
+
     if draw_CHAOSvector_diff or draw_IGRFvector_diff:
         sword.draw_vector(swarm_pos_in_poly, B=vector_components)
+    else:
+        sword.draw_swarm_scatter(swarm_pos_in_poly, swarm_values_in_poly, custom_label=legend_label,
+                                 annotate=False)  # отрисовка значение точек на орбите
     if observ_code_value is not None:
         sword.draw_point_with_annotate(obs_location, annotate=obs_code)
     # конвертация figure matplotlib в PIL image для stacker.py

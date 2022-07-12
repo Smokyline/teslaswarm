@@ -32,6 +32,7 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from scipy.interpolate import griddata
 from teslaswarm.settings import STATIC_OS_PATH
 from tools.dt_foo import decode_str_dt_param, decode_str_time_param
+from tools.sun_position import sun_pos
 from tools.data_foo import *
 
 class SWORD():
@@ -115,9 +116,9 @@ class SWORD():
         else:
             if extend is None:
                 if proj_type == 'ortho_s':
-                    self.extend = [-179, 179, -47, -90]
+                    self.extend = [-179, 179, -40, -90]
                 elif proj_type == 'ortho_n':
-                    self.extend = [-179, 179, 47, 90]
+                    self.extend = [-179, 179, 40, 90]
             else:
                 self.extend = extend
             self.ax.set_extent(self.extend, self.transform)
@@ -388,6 +389,7 @@ class SWORD():
             cb_type = 'zero_min'
         if 'FAC' in custom_label:
             unit = 'SWARM-%s, %sA/m²' % (custom_label, chr(956))
+            cmap = plt.get_cmap('seismic')
         if 'IGRF' in custom_label:
             unit = custom_label + ' (nT)'
         if 'CHAOS7' in custom_label:
@@ -568,6 +570,7 @@ class SWORD():
                     bounds = [-6, -5.0, -4., -3., -2., -1., 0, 1., 2., 3., 4., 5., 6]
                 else:
                     bounds = [vmin, -5.0, -4., -3., -2., -1., 0, 1., 2., 3., 4., 5., vmax]
+                #bounds = [vmin, 0, vmax]
             elif ('d' in label):
                 if vmax < 50:
                     bounds = [-100, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 100]
@@ -656,7 +659,7 @@ class SWORD():
         u = 100
         q = self.ax.quiver(X, Y, B[:, 0], B[:, 1], transform=ccrs.PlateCarree(),
                            width=0.0006, color='m', zorder=8, alpha=0.75)
-        self.ax.quiverkey(q, X=0.7, Y=1.0175, U=u,  labelpos='E', label='SWARM-model vector length {dN, dE} = %s' % u, transform=ccrs.PlateCarree())
+        self.ax.quiverkey(q, X=0.35, Y=-0.02, U=u,  labelpos='E', label='SWARM-model vector length {dN, dE} = %s' % u, transform=ccrs.PlateCarree())
 
     def draw_shapefile(self, shapefile):
         #inProj = Proj(init='laea', preserve_units=True)
