@@ -628,8 +628,8 @@ class SWORD():
         #   https://stackoverflow.com/questions/15908371/matplotlib-colorbars-and-its-text-labels
         if cb_type == 'zero_center' and ('d' in label or 'FAC' in label):
             cb = plt.colorbar(cm, ax=self.ax, orientation=orientation, shrink=0.35, fraction=0.05, pad=pad)
-            cb.ax.set_yticks([int(v) for v in bounds])
-            cb.ax.set_yticklabels([int(v) for v in bounds])
+            #cb.ax.set_yticks([int(v) for v in bounds])
+            #cb.ax.set_yticklabels([int(v) for v in bounds])
         else:
             cb = plt.colorbar(cm, ax=self.ax, orientation=orientation, shrink=0.35, fraction=0.05, pad=pad)
         cb.set_label(label, labelpad=label_pad, rotation=rotation)
