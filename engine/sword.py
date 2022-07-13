@@ -425,6 +425,11 @@ class SWORD():
                 line_mp_lenght = 3
             else:
                 line_mp_lenght = 1e5
+        if 'mu' in custom_label:
+            if self.proj_type == 'miller':
+                line_mp_lenght = 5
+            else:
+                line_mp_lenght = 1e5
 
         if self.proj_type == 'miller':
             line_mp_lenght_max = 1500
