@@ -91,6 +91,8 @@ def main(input_events, selected=None, delta_minute=10):
                                                     """
                         swarm_set = get_swarm_set(str(selected_liter), from_date, to_date, delta=delta,
                                                       fac2_mod=fac2)
+                        #swarm_set = get_swarm_set(get_sql_response(sw_liter,from_date, to_date, fac2_mod), sw_liter, delta, fac2_mod)
+
                     except:
                         continue
                     im1 = get_proj_image(swarm_info=[swarm_set, from_date, to_date, sw_channel], proj_type='miller',

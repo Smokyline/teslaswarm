@@ -664,7 +664,7 @@ class SWORD():
         #B = sw_value[:, :2]
         u = 100
         q = self.ax.quiver(X, Y, B[:, 0], B[:, 1], transform=ccrs.PlateCarree(),
-                           width=0.0006, color='m', zorder=8, alpha=0.75)
+                           width=0.00075, color='g', zorder=8, alpha=0.9)
         self.ax.quiverkey(q, X=0.35, Y=-0.02, U=u,  labelpos='E', label='SWARM-model vector length {dN, dE} = %s' % u, transform=ccrs.PlateCarree())
 
     def draw_shapefile(self, shapefile):

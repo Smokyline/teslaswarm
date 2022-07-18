@@ -3,15 +3,19 @@ import numpy as np
 from tools.dt_foo import *
 from tools.coordinates_convert import rotate_GEO_vector_to_MFA
 from teslaswarm.settings import STATIC_OS_PATH
-
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import animation
 from tools.sql_table import get_swarm_set, get_sql_response
 from tools.dt_foo import decode_str_dt_param
+
 sw_liter = 'A'
-from_date = '2021-4-17T08:11:59'
-to_date = '2021-4-17T09:45:59'
+from_date = '2015-02-17T03:23:00'
+to_date = '2015-02-17T03:27:00'
 from_date, to_date = decode_str_dt_param(from_date), decode_str_dt_param(to_date)
 delta = 1
 fac2_mod = False
+label_tick_delta = 75
 
 sql_response = get_sql_response(sw_liter,from_date, to_date, fac2_mod)
 swarm_set_full = get_swarm_set(sql_response, sw_liter, None, fac2_mod)
@@ -28,9 +32,7 @@ MFA_field, field_MFA_lines, coord_GSM = rotate_GEO_vector_to_MFA(swarm_set_full,
                                                                  mfield_min=1)
 print(MFA_field)
 print(coord_GSM)
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import animation
+
 
 
 
@@ -53,10 +55,12 @@ plt.plot(xrange, np.sqrt(MFA_field[:, 0]**2 + MFA_field[:, 1]**2 + MFA_field[:, 
 
 plt.legend()
 plt.grid(True)
-ax.set_xticks(np.arange(len(sw_lat))[::225])
-ax.set_xticklabels(np.round(coord_GSM[::225, 1], 2))
+ax.set_xticks(np.arange(len(sw_lat))[::label_tick_delta])
+#ax.set_xticklabels(np.round(coord_GSM[::225, 1], 2))
+ax.set_xticklabels([str(dt.time()) for dt in sw_dt[::label_tick_delta]], rotation=40)
 ax.set_ylabel('nT')
-ax.set_xlabel('Lat GSM')
+ax.set_xlabel('UT')
+plt.title('SWARM-%s from %s to %s' % (sw_liter, from_date, to_date))
 plt.show()
 
 """

@@ -26,66 +26,6 @@ from pyproj import Proj, transform, CRS
 
 
 
-def data_reduction(respond, delta, fac2_mod=False):
-    warnings.simplefilter("ignore", category=RuntimeWarning)
-    """сжимание секундных данных до delta шага"""
-    # fac2 = (Y, X, R), dt, (fac2)
-    # vector, measure mu, fac, chaos = (Y, X, R), dt, (N, E, C)
-    N, M = respond.shape
-    if fac2_mod:
-        idx999 = np.where(respond[:, 4] >= 999)[0]
-        # respond = respond[idx999]
-        respond[idx999, 4] = np.nan
-        redu_resp = np.empty((0, 5))
-    else:
-        redu_resp = np.empty((0, M))
-
-    if delta <= 1:
-        window = 1
-    else:
-        window = int(delta / 2)
-    st_idx = 0
-    while st_idx < N:
-        if st_idx != 0:
-            left_idx = st_idx - window
-        else:
-            left_idx = 0
-        right_idx = st_idx + window
-        delta_resp = respond[left_idx:right_idx]
-        if fac2_mod:
-            dt, y, x, r, fac2 = delta_resp[-1, (0, 1, 2, 3, 4)]
-            fac2 = np.nanmean(delta_resp[:, 4])
-            #if np.isnan(fac2):
-            #    fac2 = 0.
-            redu_resp = np.append(redu_resp, [[dt, y, x, r, fac2]], axis=0)
-
-        else:
-            dt, y, x, r = delta_resp[-1, (0, 1, 2, 3)]
-            n = np.mean(delta_resp[:, 4])
-            e = np.mean(delta_resp[:, 5])
-            c = np.mean(delta_resp[:, 6])
-            f = np.mean(delta_resp[:, 7])
-            redu_resp = np.append(redu_resp, [[dt, y, x, r, n, e, c, f]], axis=0)
-        st_idx += delta
-
-        """if fac2_mod:
-        #https://pandas.pydata.org/docs/user_guide/missing_data.html
-        redu_resp[:, 4] = pd.DataFrame(np.array(redu_resp[:, 4]), dtype='float32').interpolate().to_numpy().T[0]
-        """
-
-        """
-        miss_values_pd = pd.DataFrame(redu_resp[:, 4])
-        fac2_miss_values_pd = miss_values_pd.fillna(miss_values_pd.mean())
-        #fac2_miss_values_pd = miss_values_pd.fillna(value=miss_values_pd)
-        redu_resp[:, 4] = fac2_miss_values_pd.T.to_numpy()
-        """
-
-            #for i, resp in enumerate(fac2_miss_values_pd):
-             #       if np.isnan(respond[i, 3]):
-             #                   print(respond[i], 'is nan')
-    return redu_resp
-
-
 
 def calc_ACvector(sw_a_cd, sw_c_cd, sw_a_values, sw_c_values, channel):
     """вычисление разницы векторов между Swarm A и Swarm C"""

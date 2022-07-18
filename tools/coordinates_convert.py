@@ -35,8 +35,8 @@ def earth_radius_in_meters(latitude_radians):
 
 
 
-def rotate_GEO_vector_to_MFA(sw_lat, sw_lon, sw_rad, sw_Bvector, sw_dtime):
-    from geopack import geopack, t89
+def rotate_GEO_vector_to_MFA(full_sw_set, sw_lat, sw_lon, sw_rad, sw_Bvector, sw_dtime, mfield_min):
+    from geopack import geopack
 
     '''
     convert from GEO b vector to mean field alignet (MFA) coord system
@@ -44,64 +44,72 @@ def rotate_GEO_vector_to_MFA(sw_lat, sw_lon, sw_rad, sw_Bvector, sw_dtime):
     https://github.com/tsssss/geopack
     '''
     t0 = datetime.datetime(1970, 1, 1)
-    rzero = 1+(100/6371.0)
+    rzero = 1+(100/6371.2)
     #xyzGEO = to_cast(sw_lon, sw_lat, sw_rad/6371.0)
     ut = (sw_dtime[0] - t0).total_seconds()
     ps = geopack.recalc(ut)
 
+    sw_dtime = np.array(sw_dtime)
+
+    sat_coord_GSM = np.empty(shape=(0, 3))
+    mf_coord_GSM = np.empty(shape=(0, 3))
+
     coord_GSM = np.empty(shape=(0, 3))
-    field_MFA = np.empty(shape=(0, 3))
+    vectorB_MFA = np.empty(shape=(0, 3))
     field_MFA_lines = []
     for i in range(len(sw_lat)):
-
-
-        cvals = coord.Coords([sw_rad[i]/6371.0, np.float(sw_lat[i]), np.float(sw_lon[i])], 'GEO', 'sph', ['Re', 'deg', 'deg'])
-        cvals.ticks = Ticktock(sw_dtime[i])
-        xgeo,ygeo,zgeo = np.array(cvals.convert('GEO', 'car').data)[0]
+        cgeo = coord.Coords([sw_rad[i]/6371.0, np.float(sw_lat[i]), np.float(sw_lon[i])], 'GEO', 'sph', ['Re', 'deg', 'deg'])
+        cgeo.ticks = Ticktock(sw_dtime[i])
+        #xgeo,ygeo,zgeo = np.array(cgeo.convert('GEO', 'car').data)[0]
         #xgeo,ygeo,zgeo = geopack.sphcar(sw_rad[i]/6371.2, np.deg2rad(sw_lat[i]), np.deg2rad(sw_lon[i]), 1)
+        #xgsm, ygsm, zgsm = geopack.geogsm(xgeo, ygeo, zgeo, 1)
+        xgsm, ygsm, zgsm = np.array(cgeo.convert('GSM', 'car').data)[0]
+        if sw_lat[i] >= 0:
+            dir = 1
+        else:
+            dir = 1
+        x1gsm, y1gsm, z1gsm, xx, yy, zz = geopack.trace(xgsm, ygsm, zgsm,
+                                            dir=dir, rlim=10, r0=rzero,
+                                            parmod=2, exname='t89', inname='igrf', maxloop=1)
+        sat_coord_GSM = np.append(sat_coord_GSM, [[xgsm, ygsm, zgsm]], axis=0)
+        mf_coord_GSM = np.append(mf_coord_GSM, [[x1gsm, y1gsm, z1gsm]], axis=0)
 
-
-        xgsm, ygsm, zgsm = geopack.geogsm(xgeo,ygeo,zgeo,  1)
-
-        # TODO 1 north, -1 south
-        x1gsm, y1gsm, z1gsm, xx,yy,zz = geopack.trace(xgsm, ygsm, zgsm,
-                                            dir=1, rlim=10, r0=rzero,
-                                            parmod=2,exname='t89',inname='igrf', maxloop=1)
-        dxgsm, dygsm, dzgsm = x1gsm - xgsm, y1gsm-y1gsm, z1gsm-zgsm
-
-        xnew = rotate(v1=[xgsm, ygsm, zgsm], v2=[dxgsm, dygsm, dzgsm], xold=sw_Bvector[i, :3])
-        field_MFA = np.append(field_MFA, [xnew], axis=0)
-
-        #print(xgsm, ygsm, zgsm)
-        #print(dxgsm, dygsm, dzgsm)
         #rgeo, latgeo, longeo = geopack.sphcar(xgsm, ygsm, zgsm, -1)
-        cvals = coord.Coords([xgsm, ygsm, zgsm], 'GSM', 'car')
-        cvals.ticks = Ticktock(sw_dtime[i])
-        rgeo, latgeo, longeo = np.array(cvals.convert('GSM', 'sph').data)[0]
+        cgsm = coord.Coords([xgsm, ygsm, zgsm], 'GSM', 'car')
+        cgsm.ticks = Ticktock(sw_dtime[i])
+        rgeo, latgeo, longeo = np.array(cgsm.convert('GSM', 'sph').data)[0]
 
         coord_GSM = np.append(coord_GSM, [[rgeo, latgeo, longeo]], axis=0)
         #coord_GSM = np.append(coord_GSM, [[xgsm, ygsm, zgsm]], axis=0)
-        field_MFA_lines.append([xx,yy,zz])
-        """
+        field_MFA_lines.append([xx, yy, zz])
+    for i in range(len(sw_lat)):
+        mdt_from, mdt_to = sw_dtime[i] - datetime.timedelta(minutes=mfield_min/2), sw_dtime[i] + datetime.timedelta(minutes=mfield_min/2)
+        dtrange_idx = np.where(np.logical_and(sw_dtime >= mdt_from, sw_dtime <= mdt_to))[0]
+        x_meanf = np.mean(mf_coord_GSM[dtrange_idx, 0])
+        y_meanf = np.mean(mf_coord_GSM[dtrange_idx, 1])
+        z_meanf = np.mean(mf_coord_GSM[dtrange_idx, 2])
 
-        b0xgsm,b0ygsm,b0zgsm = geopack.dip(xgsm,ygsm,zgsm)    		# calc dipole B in GSM.
-        dbxgsm,dbygsm,dbzgsm = t89.t89(2, ps, xgsm,ygsm,zgsm)       # calc T89 dB in GSM.
-        #bxgsm,bygsm,bzgsm = [b0xgsm+dbxgsm,b0ygsm+dbygsm,b0zgsm+dbzgsm]
-        
-        bcvals = coord.Coords([bxgsm,bygsm,bzgsm], 'GSM', 'car')
-        bcvals.ticks = Ticktock(dt)
-        r, lat, lon = np.array(cvals.convert('GEO', 'shp').data)[0]
-        field_var_geocoord = np.append(field_var_geocoord, [[lat, lon, r]], axis=0)"""
-    return np.array(field_MFA),field_MFA_lines, coord_GSM
+        x_meansat = np.mean(sat_coord_GSM[dtrange_idx, 0])
+        y_meansat = np.mean(sat_coord_GSM[dtrange_idx, 1])
+        z_meansat = np.mean(sat_coord_GSM[dtrange_idx, 2])
+
+        x_sat, y_sat, z_sat = sat_coord_GSM[i, 0], sat_coord_GSM[i, 1], sat_coord_GSM[i, 2],
+
+        # NEC -> MFA
+        nu_gsm, phi_gsm, mu_gsm = x_meanf - x_sat, y_meanf - y_sat, z_meanf - z_sat
+        xnew = rotate(v1=[x_meansat, y_meansat, z_meansat], v2=[nu_gsm, phi_gsm, mu_gsm], xold=sw_Bvector[i, :3])
+        vectorB_MFA = np.append(vectorB_MFA, [xnew], axis=0)
+
+    return np.array(vectorB_MFA),field_MFA_lines, coord_GSM
 
 def GEO2MAG(lat, lon, dt):
-    cvals = coord.Coords([np.float(6371.0), np.float(lat), np.float(lon)], 'GEO', 'sph', ['Re', 'deg', 'deg'])
+    cvals = coord.Coords([1, np.float(lat), np.float(lon)], 'GEO', 'sph', ['Re', 'deg', 'deg'])
     cvals.ticks = Ticktock(dt)
     new_coord = np.array(cvals.convert('MAG', 'sph').data)[0]
     return [new_coord[2], new_coord[1]]     # mag lon, lat
 
 def MAG2GEO(lat, lon, dt):
-    cvals = coord.Coords([np.float(6371.0), np.float(lat), np.float(lon)], 'MAG', 'sph', ['Re', 'deg', 'deg'])
+    cvals = coord.Coords([1, np.float(lat), np.float(lon)], 'MAG', 'sph', ['Re', 'deg', 'deg'])
     cvals.ticks = Ticktock(dt)
     new_coord = np.array(cvals.convert('GEO', 'sph').data)[0]
     return [new_coord[2], new_coord[1]]     # mag lon, lat
@@ -114,7 +122,8 @@ def geo2GSM(sw_pos, swarm_date, to_coord='MAG'):
     # alt above sea lvl to rad
     for i, r in enumerate(init_coords[:, 0]):
         earth_r = earth_radius_in_meters(init_coords[i, 1])
-        init_coords[i, 0] = (init_coords[i, 0] + earth_r) * 1000 / earth_r
+        #init_coords[i, 0] = (init_coords[i, 0] + earth_r) * 1000 / earth_r     # geoid
+        init_coords[i, 0] = 6371.2
     cvals = coord.Coords(init_coords, 'GEO', 'sph')
 
     dt_array = []
@@ -127,7 +136,8 @@ def geo2GSM(sw_pos, swarm_date, to_coord='MAG'):
 
     for i, r in enumerate(newcoord[:, 0]):
         earth_r = earth_radius_in_meters(init_coords[i, 1])
-        newcoord[i, 0] = newcoord[i, 0] * earth_r / 1000
+        #newcoord[i, 0] = newcoord[i, 0] * earth_r / 1000       # geoid
+        newcoord[i, 0] = 6371.2
     # lan, lon, r
     return np.array([newcoord[:, 1], newcoord[:, 2], newcoord[:, 0]]).T
 
