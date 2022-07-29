@@ -1,20 +1,8 @@
 import numpy as np
 import pymysql
+import warnings
 import datetime
-from tools.data_foo import *
-from tools.dt_foo import ut_dt_to_unix, unix_to_ut_dt
-from tools.coordinates_convert import GEO_to_GDZgeomag_projection
-### !!!!!
-import pandas as pd
-from teslaswarm.settings import STATIC_OS_PATH
-
-#  unix time to ut
-# ut_time_dt = datetime.fromtimestamp(int_value)
-
-#  ut time to unix
-# unix_time = ut_time_dt.strftime('%s') # '1485896400'
-# or
-# unix_time = ut_time_dt..timestamp() # 1485896400.0
+from datetime import timezone
 
 def get_sql_response(swarm_liter, from_date, to_date, fac2_mod=False):
     swarm_liter = 'SW' + swarm_liter.upper()
@@ -53,11 +41,8 @@ def get_sql_response(swarm_liter, from_date, to_date, fac2_mod=False):
     print('-------------------------------------------------------------------------------------')
     return np.array(respond)
 
-    #df = pd.read_csv(STATIC_OS_PATH + '/data/dataset_fac2_3days.csv', header=None)
-    #return df
 
-
-def get_swarm_set(respond, swarm_liter, delta=None, fac2_mod=False, geomag_proj=False):
+def get_swarm_set(respond, swarm_liter, delta=None, fac2_mod=False):
     """Парсинг ответа SQL в [[swarm liter, XY, dt, values], ...]"""
 
 
@@ -95,13 +80,6 @@ def get_swarm_set(respond, swarm_liter, delta=None, fac2_mod=False, geomag_proj=
             swarm_values = np.append(swarm_values, np.array([v]).T, axis=1)
     if swarm_liter == '_':
         swarm_liter = 'AC'
-
-    if geomag_proj:     # перевод из вертикальной проекции в геомагнитную
-        swarm_GEO_pos = np.array(swarm_position)
-        swarm_dt = np.array([decode_str_dt_param(d + 'T' + t) for d, t in zip(swarm_date, swarm_time)])
-        swarm_position = GEO_to_GDZgeomag_projection(swarm_GEO_pos[:, 0], swarm_GEO_pos[:, 1], swarm_GEO_pos[:, 2],
-                                                     swarm_dt)
-        swarm_position[:, 2] = swarm_GEO_pos[:, 2]
 
     return [swarm_liter, np.array(swarm_position),
             np.array(swarm_date), np.array(swarm_time), swarm_values]
@@ -166,3 +144,69 @@ def data_averaging(respond, delta, fac2_mod=False):
              #                   print(respond[i], 'is nan')
     return redu_resp
 
+def decode_str_dt_param(str_dt):
+    date, time = str_dt.split('T')
+    dt = datetime.datetime.strptime(
+        '%s %s' %
+        (date, time), '%Y-%m-%d %H:%M:%S')
+    return dt
+
+def ut_dt_to_unix(dt, out_type='str'):
+    """Конвертирование UT datetime в unix time"""
+    if out_type == 'str':
+        #unix_time = int(time.mktime(dt.timetuple()))
+        #unix_time = int(dt.timestamp())
+        #unix_time = int(dt.replace(tzinfo=timezone.utc).timestamp())
+        unix_time = dt.replace(tzinfo=timezone.utc).astimezone(tz=None).timestamp()
+
+    elif out_type == 'float':
+        unix_time = dt.timestamp()
+    else:
+        print('Error input unix type')
+        unix_time = None
+    return unix_time  # int ot float
+
+
+def unix_to_ut_dt(unix_time):
+    """Конвертирование unix int time в UT datetime"""
+
+    if not isinstance(unix_time, int):
+        print('Error input unix type')
+        ut_time_dt = None
+    else:
+        #ut_time_dt = datetime.datetime.fromtimestamp(unix_time)
+        ut_time_dt = datetime.datetime.utcfromtimestamp(unix_time).strftime('%Y-%m-%d %H:%M:%S')
+    return ut_time_dt  # dt
+
+
+def get_sql_swarm_data(sw_liter='A',
+                       from_date='2015-02-17T03:23:00', to_date='2015-02-17T03:27:00',
+                       delta=1, fac2_mod=False):
+    """
+    input
+    sw_liter: A, B, C, _ (A&C)
+    from_date, to_date: YY-MM-DDTh:m:s
+    delta: int, sec average swarm values
+    fac2_mod: bool
+
+    return
+    swarm_liter,
+    swarm_latGEO, swarm_lonGEO,  swarm_r_km,
+    swarm_datetime (datetime) UTC
+    swarm_values (X,Y,Z,F) or (FAC) if fac2_mod==True)
+    """
+    from_date, to_date = decode_str_dt_param(from_date), decode_str_dt_param(to_date)
+
+
+
+    sql_response = get_sql_response(sw_liter, from_date, to_date, fac2_mod)
+    swarm_set = get_swarm_set(sql_response, sw_liter, delta, fac2_mod)
+    sw_liter = swarm_set[0]
+    sw_lat = swarm_set[1][:, 0]
+    sw_lon = swarm_set[1][:, 1]
+    sw_rad = swarm_set[1][:, 2]
+    sw_dt = np.array([decode_str_dt_param(d+'T'+t) for d, t in zip(swarm_set[2], swarm_set[3])])
+    sw_vector = swarm_set[4]    # [x,y,z,f] for [fac] if fac2_mod==True
+    return sw_liter, sw_lat, sw_lon, sw_rad, sw_dt, sw_vector
+
+print(get_sql_swarm_data())

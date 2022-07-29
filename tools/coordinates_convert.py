@@ -5,6 +5,9 @@ from tools.rotate2 import rotate
 from spacepy import coordinates as coord
 from spacepy.time import Ticktock
 import datetime
+from scipy import interpolate
+from pyproj import Proj, transform
+import warnings
 
 def get_solar_coord(date, lon):
     lon_to360 = lambda x: (x - 180) % 360 - 180  # -180 180 to 0 360
@@ -34,8 +37,66 @@ def earth_radius_in_meters(latitude_radians):
     return math.sqrt((t1*t1 + t2*t2) / (t3*t3 + t4*t4))
 
 
+def GEO_to_GDZgeomag_projection(sw_lat, sw_lon, sw_rad, sw_dtime):
+    from geopack import geopack
+    warnings.simplefilter("ignore", category=DeprecationWarning)
 
-def rotate_GEO_vector_to_MFA(full_sw_set, sw_lat, sw_lon, sw_rad, sw_Bvector, sw_dtime, mfield_min):
+    '''
+    convert from GEO  to geomagnetic trace projection coord system
+    https://geo.phys.spbu.ru/~tsyganenko/
+    https://github.com/tsssss/geopack
+    '''
+    t0 = datetime.datetime(1970, 1, 1)
+    #rzero = 1+(100/6371.2)
+    rzero = 1+(1/6371.2)
+    #xyzGEO = to_cast(sw_lon, sw_lat, sw_rad/6371.0)
+    ut = (sw_dtime[0] - t0).total_seconds()
+    ps = geopack.recalc(ut)
+
+    sw_dtime = np.array(sw_dtime)
+
+    geomag_trace_coord = np.empty(shape=(0, 3))
+
+    for i in range(len(sw_lat)):
+        cgeo = coord.Coords([sw_rad[i]/6371.2, np.float(sw_lat[i]), np.float(sw_lon[i])], 'GEO', 'sph', ['Re', 'deg', 'deg'])
+        cgeo.ticks = Ticktock(sw_dtime[i])
+        #xgeo,ygeo,zgeo = np.array(cgeo.convert('GEO', 'car').data)[0]
+        #xgeo,ygeo,zgeo = geopack.sphcar(sw_rad[i]/6371.2, np.deg2rad(sw_lat[i]), np.deg2rad(sw_lon[i]), 1)
+        #xgsm, ygsm, zgsm = geopack.geogsm(xgeo, ygeo, zgeo, 1)
+        xgsm, ygsm, zgsm = np.array(cgeo.convert('GSM', 'car').data)[0]
+        if sw_lat[i] >= 0:
+            dir = -1
+        else:
+            dir = 1
+        x1gsm, y1gsm, z1gsm, xx, yy, zz = geopack.trace(xgsm, ygsm, zgsm,
+                                            dir=dir, rlim=10, r0=rzero,
+                                            parmod=2, exname='t89', inname='igrf', maxloop=1)
+
+        X_trace = np.linspace(xgsm, x1gsm, 75)
+        Y_trace = np.linspace(ygsm, y1gsm, 75)
+        Z_trace = np.linspace(zgsm, z1gsm, 75)
+        latgdz, longdz, radgdz = 0, 0, 0
+        for j in range(len(X_trace)):
+            tracegsm = coord.Coords([X_trace[j], Y_trace[j], Z_trace[j]], 'GSM', 'car')
+            tracegsm.ticks = Ticktock(sw_dtime[i])
+            rgeo, latgeo, longeo = np.array(tracegsm.convert('GEO', 'sph').data)[0]
+            # print(rgeo*6371.0)
+            if rgeo * 6371.2 <= 6371.2 + 100:
+                #xgeo, ygeo, zgeo = gc_latlon_to_xyz(latgeo, longeo, rgeo * 6371.2)
+                #latlonr = gc2gd((xgeo, ygeo, zgeo))
+                #latgdz, longdz, radgdz = latlonr
+
+                radgdz, latgdz, longdz = np.array(tracegsm.convert('GDZ', 'sph').data)[0]
+                #latgdz, longdz, radgdz = np.array(tracegsm.convert('GSM', 'car').data)[0]
+
+                break
+
+        geomag_trace_coord = np.append(geomag_trace_coord, [[latgdz, longdz, rgeo * 6371.2]], axis=0)
+        #geomag_trace_coord = np.append(geomag_trace_coord, [[latgeo, longeo, rgeo * 6371.2]], axis=0)
+    print(geomag_trace_coord)
+    return geomag_trace_coord
+
+def rotate_GEO_vector_to_MFA(sw_lat, sw_lon, sw_rad, sw_Bvector, sw_dtime, mfield_min, dir=1):
     from geopack import geopack
 
     '''
@@ -44,8 +105,9 @@ def rotate_GEO_vector_to_MFA(full_sw_set, sw_lat, sw_lon, sw_rad, sw_Bvector, sw
     https://github.com/tsssss/geopack
     '''
     t0 = datetime.datetime(1970, 1, 1)
-    rzero = 1+(100/6371.2)
-    #xyzGEO = to_cast(sw_lon, sw_lat, sw_rad/6371.0)
+    #rzero = 1 + (100 / 6371.2)
+    rzero = 1.1
+    # xyzGEO = to_cast(sw_lon, sw_lat, sw_rad/6371.0)
     ut = (sw_dtime[0] - t0).total_seconds()
     ps = geopack.recalc(ut)
 
@@ -56,34 +118,57 @@ def rotate_GEO_vector_to_MFA(full_sw_set, sw_lat, sw_lon, sw_rad, sw_Bvector, sw
 
     coord_GSM = np.empty(shape=(0, 3))
     vectorB_MFA = np.empty(shape=(0, 3))
+    geomag_trace_coord = np.empty(shape=(0, 3))
     field_MFA_lines = []
     for i in range(len(sw_lat)):
-        cgeo = coord.Coords([sw_rad[i]/6371.0, np.float(sw_lat[i]), np.float(sw_lon[i])], 'GEO', 'sph', ['Re', 'deg', 'deg'])
+        cgeo = coord.Coords([sw_rad[i] / 6371.0, np.float(sw_lat[i]), np.float(sw_lon[i])], 'GEO', 'sph',
+                            ['Re', 'deg', 'deg'])
         cgeo.ticks = Ticktock(sw_dtime[i])
         #xgeo,ygeo,zgeo = np.array(cgeo.convert('GEO', 'car').data)[0]
-        #xgeo,ygeo,zgeo = geopack.sphcar(sw_rad[i]/6371.2, np.deg2rad(sw_lat[i]), np.deg2rad(sw_lon[i]), 1)
+        # xgeo,ygeo,zgeo = geopack.sphcar(sw_rad[i]/6371.2, np.deg2rad(sw_lat[i]), np.deg2rad(sw_lon[i]), 1)
         #xgsm, ygsm, zgsm = geopack.geogsm(xgeo, ygeo, zgeo, 1)
         xgsm, ygsm, zgsm = np.array(cgeo.convert('GSM', 'car').data)[0]
         if sw_lat[i] >= 0:
-            dir = 1
+            dir = -1
         else:
             dir = 1
         x1gsm, y1gsm, z1gsm, xx, yy, zz = geopack.trace(xgsm, ygsm, zgsm,
-                                            dir=dir, rlim=10, r0=rzero,
-                                            parmod=2, exname='t89', inname='igrf', maxloop=1)
+                                                        dir=dir, rlim=2, r0=rzero,
+                                                        parmod=2, exname='t89', inname='igrf', maxloop=1)
+
+
         sat_coord_GSM = np.append(sat_coord_GSM, [[xgsm, ygsm, zgsm]], axis=0)
         mf_coord_GSM = np.append(mf_coord_GSM, [[x1gsm, y1gsm, z1gsm]], axis=0)
 
-        #rgeo, latgeo, longeo = geopack.sphcar(xgsm, ygsm, zgsm, -1)
+        # rgeo, latgeo, longeo = geopack.sphcar(xgsm, ygsm, zgsm, -1)
         cgsm = coord.Coords([xgsm, ygsm, zgsm], 'GSM', 'car')
         cgsm.ticks = Ticktock(sw_dtime[i])
         rgeo, latgeo, longeo = np.array(cgsm.convert('GSM', 'sph').data)[0]
 
-        coord_GSM = np.append(coord_GSM, [[rgeo, latgeo, longeo]], axis=0)
-        #coord_GSM = np.append(coord_GSM, [[xgsm, ygsm, zgsm]], axis=0)
+        #coord_GSM = np.append(coord_GSM, [[rgeo, latgeo, longeo]], axis=0)
+        coord_GSM = np.append(coord_GSM, [[xgsm, ygsm, zgsm]], axis=0)
         field_MFA_lines.append([xx, yy, zz])
+
+        X_trace = np.linspace(xgsm, x1gsm, 100)
+        Y_trace = np.linspace(ygsm, y1gsm, 100)
+        Z_trace = np.linspace(zgsm, z1gsm, 100)
+
+        xgdz, ygdz, zgdz = 0, 0, 0
+        for j in range(len(X_trace)):
+            tracegsm = coord.Coords([X_trace[j], Y_trace[j], Z_trace[j]], 'GSM', 'car')
+            tracegsm.ticks = Ticktock(sw_dtime[i])
+            rgeo, latgeo, longeo = np.array(tracegsm.convert('GEO', 'sph').data)[0]
+            #print(rgeo*6371.0)
+            if rgeo*6371.0 <= 6371.0 + 100:
+                xgdz, ygdz, zgdz = np.array(tracegsm.convert('GDZ', 'sph').data)[0]
+                #xgdz, ygdz, zgdz = X_trace[j], Y_trace[j], Z_trace[j]
+                break
+
+        geomag_trace_coord = np.append(geomag_trace_coord,[[xgdz, ygdz, zgdz]], axis=0)
+
     for i in range(len(sw_lat)):
-        mdt_from, mdt_to = sw_dtime[i] - datetime.timedelta(minutes=mfield_min/2), sw_dtime[i] + datetime.timedelta(minutes=mfield_min/2)
+        mdt_from, mdt_to = sw_dtime[i] - datetime.timedelta(minutes=mfield_min / 2), sw_dtime[i] + datetime.timedelta(
+            minutes=mfield_min / 2)
         dtrange_idx = np.where(np.logical_and(sw_dtime >= mdt_from, sw_dtime <= mdt_to))[0]
         x_meanf = np.mean(mf_coord_GSM[dtrange_idx, 0])
         y_meanf = np.mean(mf_coord_GSM[dtrange_idx, 1])
@@ -100,7 +185,8 @@ def rotate_GEO_vector_to_MFA(full_sw_set, sw_lat, sw_lon, sw_rad, sw_Bvector, sw
         xnew = rotate(v1=[x_meansat, y_meansat, z_meansat], v2=[nu_gsm, phi_gsm, mu_gsm], xold=sw_Bvector[i, :3])
         vectorB_MFA = np.append(vectorB_MFA, [xnew], axis=0)
 
-    return np.array(vectorB_MFA),field_MFA_lines, coord_GSM
+    return np.array(vectorB_MFA), field_MFA_lines, coord_GSM, geomag_trace_coord
+
 
 def GEO2MAG(lat, lon, dt):
     cvals = coord.Coords([1, np.float(lat), np.float(lon)], 'GEO', 'sph', ['Re', 'deg', 'deg'])
@@ -240,10 +326,45 @@ def cart2polar(x, y):
     return (rho, np.rad2deg(phi))
 
 
+def geocentric_latitude(lat):
+    # Convert geodetic latitude 'lat' to a geocentric latitude 'clat'.
+    # Geodetic latitude is the latitude as given by GPS.
+    # Geocentric latitude is the angle measured from center of Earth between a point and the equator.
+    # https:#en.wikipedia.org/wiki/Latitude#Geocentric_latitude
+    e2 = 0.00669437999014
+    return math.atan((1.0 - e2) * math.tan(lat))
+
+def gc_latlon_to_xyz(lat, lon, R):
+
+    # Convert (lat, lon, elv) to (x, y, z).
+    lat = lat * math.pi / 180.0
+    lon = lon * math.pi / 180.0
+    radius = R*1000     # km to m
+    geo_centric_lat = geocentric_latitude(lat)
+
+    cos_lon = math.cos(lon)
+    sin_lon = math.sin(lon)
+    cos_lat = math.cos(geo_centric_lat)
+    sin_lat = math.sin(geo_centric_lat)
+    x = radius * cos_lon * cos_lat
+    y = radius * sin_lon * cos_lat
+    z = radius * sin_lat
+
+    return x, y, z
 
 
+def gc2gd(gc_xyz):
 
+    wgs84 = Proj('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+    geocentric = Proj('+proj=geocent +datum=WGS84 +units=m +no_defs')
 
+    # same
+    #wgs84 = CRS("EPSG:4326")   # (deg)  # Horizontal component of 3D system. Used by the GPS satellite navigation system and for NATO military geodetic surveying.
+    #geocentric = CRS("EPSG:4978")    # WGS 84 (geocentric) # X OTHER, Y EAST, Z NORTH,
+    x, y, z = gc_xyz[0], gc_xyz[1], gc_xyz[2]
+    lon, lat, alt = transform(geocentric, wgs84, x, y, z)
+    alt = alt/1000  # m to km
+    return lat, lon, alt
 
 
 """
@@ -371,7 +492,7 @@ def geo_to_gg(radius, theta):
 
     ''''''
 
-from geocentric radius and colatitude.
+    from geocentric radius and colatitude.
     to geodetic colatitude and vertical height above the ellipsoid
 
     Parameters

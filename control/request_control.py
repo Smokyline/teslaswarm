@@ -11,6 +11,7 @@ from teslaswarm.settings import STATIC_OS_PATH
 from engine.sword import SWORD
 from tools.data_to_txt import Data2Text
 from tools.data_foo import *
+from tools.coordinates_convert import *
 from tools.ionomodel_foo import get_ionomodel_surf_file
 from chaos7_model.chaos_model import CHAOS7
 from tools.sql_table import get_swarm_set
@@ -132,8 +133,8 @@ class teslaswarmControl():
     def set_mag_grid_coord(self, b=False):
         self.mag_grid_coord = b
 
-    def set_shape_file(self, file):
-        self.draw_shape = file
+    def set_geomag_proj(self, b=False):
+        self.geomag_proj = b
 
     def set_txt_out(self, b=False):
         self.txt_out = b
@@ -141,8 +142,9 @@ class teslaswarmControl():
     def get_swarm_set(self, sw_liter='A', from_date=None, to_date=None, fac_mod=False):
         #   получение датасета данных SWARM_X
         swarm_sql_response = get_sql_response(sw_liter, from_date, to_date, fac_mod)
-        self.FULL_SWARM_SET = get_swarm_set(swarm_sql_response, sw_liter, delta=None, fac2_mod=fac_mod)
-        return get_swarm_set(swarm_sql_response, sw_liter, self.swarm_value_delta, fac_mod)
+        self.FULL_SWARM_SET = get_swarm_set(swarm_sql_response, sw_liter,
+                                            delta=None, fac2_mod=fac_mod, geomag_proj=self.geomag_proj)
+        return get_swarm_set(swarm_sql_response, sw_liter, self.swarm_value_delta, fac_mod, self.geomag_proj)
 
     def get_swarmAC_diff(self, swarm_set_A, swarm_set_C, sw_channel):
         #   получение датасета данных разности значений поля между SWARM_A и SWARM_C
@@ -206,6 +208,7 @@ class teslaswarmControl():
         from_date, to_date, swarm_channel = swarm_info[1], swarm_info[2], swarm_info[3]
         d2txt = Data2Text()
         STATUS = 1
+
 
         legend_label = swarm_liter
         if len(np.array(swarm_values_necf).shape) > 1 and swarm_channel is not None:

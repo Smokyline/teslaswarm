@@ -52,7 +52,7 @@ def get_teslaswarm(request):
         'igrf_vector_diffChaos',  # bool
         'measure_mu',   # bool
         'mag_grid',   # bool
-        #'shape',        # file
+        #'geomag_proj',        # bool
         'near_auroral_points',  # bool
         'txt_out',  # bool
         ]
@@ -134,6 +134,7 @@ def get_teslaswarm(request):
     #   модель аврорального овала
     if param_dict['auroral_n'] == 'true' or param_dict['auroral_s'] == 'true':
         auroral_date = decode_str_dt_param(param_dict['auroral_date'])
+        # TODO
         #auroral_type = param_dict['auroral_type']
         auroral_type = 'mono'
         if param_dict['auroral_n'] == 'true':
@@ -174,8 +175,12 @@ def get_teslaswarm(request):
         mag_grid = False
     sm.set_mag_grid_coord(b=mag_grid)
 
-    #if param_dict['shape'] == 'true':
-    sm.set_shape_file(file=None)
+    #TODO
+    """if param_dict['geomag_proj'] == 'true':
+        geomag_proj = True
+    else:
+        geomag_proj = False
+    sm.set_geomag_proj(b=geomag_proj)"""
 
     if param_dict['txt_out'] == 'true':
         sm.set_txt_out(b=True)
